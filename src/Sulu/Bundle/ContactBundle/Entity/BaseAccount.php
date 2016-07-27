@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -13,14 +13,13 @@ namespace Sulu\Bundle\ContactBundle\Entity;
 
 use JMS\Serializer\Annotation\Exclude;
 use Sulu\Bundle\CoreBundle\Entity\ApiEntity;
-use Sulu\Bundle\MediaBundle\Entity\Media;
+use Sulu\Bundle\MediaBundle\Entity\MediaInterface;
+use Sulu\Component\Contact\Model\ContactInterface;
 use Sulu\Component\Persistence\Model\AuditableInterface;
+use Sulu\Component\Security\Authentication\UserInterface;
 
 abstract class BaseAccount extends ApiEntity implements AuditableInterface, AccountInterface
 {
-    const ENABLED = 0;
-    const DISABLED = 1;
-
     /**
      * @var int
      */
@@ -42,13 +41,13 @@ abstract class BaseAccount extends ApiEntity implements AuditableInterface, Acco
     private $changed;
 
     /**
-     * @var \Sulu\Component\Security\Authentication\UserInterface
+     * @var UserInterface
      * @Exclude
      */
     private $changer;
 
     /**
-     * @var \Sulu\Component\Security\Authentication\UserInterface
+     * @var UserInterface
      * @Exclude
      */
     private $creator;
@@ -67,11 +66,6 @@ abstract class BaseAccount extends ApiEntity implements AuditableInterface, Acco
      * @var string
      */
     private $corporation;
-
-    /**
-     * @var int
-     */
-    private $disabled = self::ENABLED;
 
     /**
      * @var string
@@ -109,12 +103,12 @@ abstract class BaseAccount extends ApiEntity implements AuditableInterface, Acco
     private $mainUrl;
 
     /**
-     * @var \Sulu\Component\Contact\Model\ContactInterface
+     * @var ContactInterface
      */
     private $mainContact;
 
     /**
-     * @var Media
+     * @var MediaInterface
      */
     protected $logo;
 
@@ -236,30 +230,6 @@ abstract class BaseAccount extends ApiEntity implements AuditableInterface, Acco
     public function getCorporation()
     {
         return $this->corporation;
-    }
-
-    /**
-     * Set disabled.
-     *
-     * @param int $disabled
-     *
-     * @return BaseAccount
-     */
-    public function setDisabled($disabled)
-    {
-        $this->disabled = $disabled;
-
-        return $this;
-    }
-
-    /**
-     * Get disabled.
-     *
-     * @return int
-     */
-    public function getDisabled()
-    {
-        return $this->disabled;
     }
 
     /**

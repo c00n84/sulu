@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -15,7 +15,8 @@ use Sulu\Bundle\ContentBundle\Document\HomeDocument;
 use Sulu\Bundle\DocumentManagerBundle\Initializer\InitializerInterface;
 use Sulu\Component\Content\Document\WorkflowStage;
 use Sulu\Component\DocumentManager\DocumentInspector;
-use Sulu\Component\DocumentManager\DocumentManager;
+use Sulu\Component\DocumentManager\DocumentManagerInterface;
+use Sulu\Component\DocumentManager\Exception\DocumentNotFoundException;
 use Sulu\Component\DocumentManager\NodeManager;
 use Sulu\Component\DocumentManager\PathBuilder;
 use Sulu\Component\Webspace\Manager\WebspaceManagerInterface;
@@ -24,15 +25,34 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class WebspaceInitializer implements InitializerInterface
 {
+    /**
+     * @var WebspaceManagerInterface
+     */
     private $webspaceManager;
+
+    /**
+     * @var DocumentManagerInterface
+     */
     private $documentManager;
+
+    /**
+     * @var PathBuilder
+     */
     private $pathBuilder;
+
+    /**
+     * @var DocumentInspector
+     */
     private $inspector;
+
+    /**
+     * @var NodeManager
+     */
     private $nodeManager;
 
     public function __construct(
         WebspaceManagerInterface $webspaceManager,
-        DocumentManager $documentManager,
+        DocumentManagerInterface $documentManager,
         DocumentInspector $inspector,
         PathBuilder $pathBuilder,
         NodeManager $nodeManager
@@ -44,9 +64,13 @@ class WebspaceInitializer implements InitializerInterface
         $this->nodeManager = $nodeManager;
     }
 
-    public function initialize(OutputInterface $output)
+    /**
+     * {@inheritdoc}
+     */
+    public function initialize(OutputInterface $output, $purge = false)
     {
-        foreach ($this->webspaceManager->getWebspaceCollection() as $webspace) {
+        $webspaces = $this->webspaceManager->getWebspaceCollection();
+        foreach ($webspaces as $webspace) {
             $this->initializeWebspace($output, $webspace);
         }
 
@@ -63,8 +87,9 @@ class WebspaceInitializer implements InitializerInterface
             $webspaceLocales[] = $localization->getLocalization();
         }
 
+        $homeType = $webspace->getDefaultTemplate('home');
         if ($this->nodeManager->has($homePath)) {
-            $homeDocument = $this->documentManager->find($homePath, 'fr', [
+            $homeDocument = $this->documentManager->find($homePath, null, [
                 'load_ghost_content' => false,
                 'auto_create' => true,
                 'path' => $homePath,
@@ -73,21 +98,43 @@ class WebspaceInitializer implements InitializerInterface
         } else {
             $homeDocument = new HomeDocument();
             $homeDocument->setTitle('Homepage');
-            $homeDocument->setStructureType($webspace->getTheme()->getDefaultTemplate('homepage'));
+            $homeDocument->setStructureType($homeType);
             $homeDocument->setWorkflowStage(WorkflowStage::PUBLISHED);
             $existingLocales = [];
         }
 
         foreach ($webspaceLocales as $webspaceLocale) {
-            $output->writeln(sprintf('<info>Homepage</info>: %s (%s)', $homePath, $webspaceLocale));
             if (in_array($webspaceLocale, $existingLocales)) {
+                $output->writeln(sprintf('  [ ] <info>homepage</info>: %s (%s)', $homePath, $webspaceLocale));
                 continue;
             }
 
-            $this->nodeManager->createPath($routesPath . '/' . $webspaceLocale);
+            $output->writeln(sprintf('  [+] <info>homepage</info>: [%s] %s (%s)', $homeType, $homePath, $webspaceLocale));
+
             $this->documentManager->persist($homeDocument, $webspaceLocale, [
                 'path' => $homePath,
+                'auto_create' => true,
+                'ignore_required' => true,
             ]);
+
+            $this->documentManager->publish($homeDocument, $webspaceLocale);
+
+            $routePath = $routesPath . '/' . $webspaceLocale;
+            try {
+                $routeDocument = $this->documentManager->find($routePath);
+            } catch (DocumentNotFoundException $e) {
+                $routeDocument = $this->documentManager->create('route');
+            }
+
+            $routeDocument->setTargetDocument($homeDocument);
+            $this->documentManager->persist($routeDocument, $webspaceLocale, [
+                'path' => $routePath,
+                'auto_create' => true,
+            ]);
+
+            $this->documentManager->publish($routeDocument, $webspaceLocale);
         }
+
+        $this->documentManager->flush();
     }
 }

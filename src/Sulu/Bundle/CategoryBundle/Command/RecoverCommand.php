@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -180,7 +180,7 @@ class RecoverCommand extends ContainerAwareCommand
         $qb = $this->getCategoryRepository()->createQueryBuilder('c2')
             ->update()
             ->set('c2.depth', 0)
-            ->where('c2.parent IS NULL AND depth != 0');
+            ->where('c2.parent IS NULL AND c2.depth != 0');
 
         $qb->getQuery()->execute();
     }

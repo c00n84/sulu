@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -19,10 +19,13 @@ use Massive\Bundle\SearchBundle\Search\Metadata\Field\Value;
 use Massive\Bundle\SearchBundle\Search\Metadata\IndexMetadata;
 use Massive\Bundle\SearchBundle\Search\Metadata\IndexMetadataInterface;
 use Massive\Bundle\SearchBundle\Search\Metadata\ProviderInterface;
+use Sulu\Component\Content\Document\Behavior\ExtensionBehavior;
 use Sulu\Component\Content\Document\Behavior\ResourceSegmentBehavior;
 use Sulu\Component\Content\Document\Behavior\StructureBehavior;
 use Sulu\Component\Content\Document\Behavior\WebspaceBehavior;
 use Sulu\Component\Content\Document\Behavior\WorkflowStageBehavior;
+use Sulu\Component\Content\Document\WorkflowStage;
+use Sulu\Component\Content\Extension\ExtensionManagerInterface;
 use Sulu\Component\Content\Metadata\BlockMetadata;
 use Sulu\Component\Content\Metadata\Factory\StructureMetadataFactory;
 use Sulu\Component\Content\Metadata\PropertyMetadata;
@@ -54,26 +57,34 @@ class StructureProvider implements ProviderInterface
     private $structureFactory;
 
     /**
+     * @var ExtensionManagerInterface
+     */
+    private $extensionManager;
+
+    /**
      * @var MetadataFactory
      */
     private $metadataFactory;
 
     /**
-     * @param Factory                  $factory
-     * @param MetadataFactory          $metadataFactory
+     * @param Factory $factory
+     * @param MetadataFactory $metadataFactory
      * @param StructureMetadataFactory $structureFactory
-     * @param array                    $mapping
+     * @param ExtensionManagerInterface $extensionManager
+     * @param array $mapping
      */
     public function __construct(
         Factory $factory,
         MetadataFactory $metadataFactory,
         StructureMetadataFactory $structureFactory,
+        ExtensionManagerInterface $extensionManager,
         array $mapping = []
     ) {
         $this->factory = $factory;
         $this->mapping = $mapping;
         $this->metadataFactory = $metadataFactory;
         $this->structureFactory = $structureFactory;
+        $this->extensionManager = $extensionManager;
     }
 
     /**
@@ -122,7 +133,14 @@ class StructureProvider implements ProviderInterface
         }
 
         if ($indexName === 'page') {
-            $indexMeta->setIndexName(new Expression('"page_"~object.getWebspaceName()'));
+            $indexMeta->setIndexName(
+                new Expression(
+                    sprintf(
+                        '"page_"~object.getWebspaceName()~(object.getWorkflowStage() == %s ? "_published" : "")',
+                        WorkflowStage::PUBLISHED
+                    )
+                )
+            );
         } else {
             $indexMeta->setIndexName(new Value($indexName));
         }
@@ -168,6 +186,15 @@ class StructureProvider implements ProviderInterface
             }
         }
 
+        if ($class->isSubclassOf(ExtensionBehavior::class)) {
+            $extensions = $this->extensionManager->getExtensions($structure->getName());
+            foreach ($extensions as $extension) {
+                foreach ($extension->getFieldMapping() as $name => $mapping) {
+                    $indexMeta->addFieldMapping($name, $mapping);
+                }
+            }
+        }
+
         if ($class->isSubclassOf(ResourceSegmentBehavior::class)) {
             $indexMeta->setUrlField($this->factory->createMetadataField('resourceSegment'));
         }
@@ -209,6 +236,15 @@ class StructureProvider implements ProviderInterface
                     ),
                 ]
             );
+            $indexMeta->addFieldMapping(
+                'published',
+                [
+                    'type' => 'date',
+                    'field' => $this->factory->createMetadataExpression(
+                        'object.getPublished()'
+                    ),
+                ]
+            );
         }
 
         $indexMeta->addFieldMapping(
@@ -216,7 +252,7 @@ class StructureProvider implements ProviderInterface
             [
                 'type' => 'string',
                 'stored' => true,
-                'indexed' => false,
+                'indexed' => true,
                 'field' => $this->factory->createMetadataProperty('structureType'),
             ]
         );

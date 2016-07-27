@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -596,7 +596,7 @@ abstract class Structure implements StructureInterface
      */
     public function getPublishedState()
     {
-        return ($this->nodeState === StructureInterface::STATE_PUBLISHED);
+        return $this->nodeState === StructureInterface::STATE_PUBLISHED;
     }
 
     /**
@@ -933,7 +933,7 @@ abstract class Structure implements StructureInterface
      * @link http://php.net/manual/en/jsonserializable.jsonserialize.php
      *
      * @return mixed data which can be serialized by <b>json_encode</b>,
-     *               which is a value of any type other than a resource.
+     *               which is a value of any type other than a resource
      */
     public function jsonSerialize()
     {

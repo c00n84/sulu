@@ -85,7 +85,6 @@ define([
         },
 
         render: function() {
-            this.sandbox.emit(this.options.disablerToggler + '.change', !!this.data.disabled);
             this.sandbox.emit('sulu.header.toolbar.item.show', 'disabler');
             this.sandbox.once('sulu.contacts.set-defaults', this.setDefaults.bind(this));
             this.sandbox.once('sulu.contacts.set-types', this.setTypes.bind(this));
@@ -148,7 +147,8 @@ define([
          * @param data
          */
         initLogoContainer: function(data) {
-            if (!!data.logo) {
+            // if logo is selected and is not a "dummy"
+            if (!!data.logo && !!data.logo.id) {
                 this.updateLogoContainer(data.logo.id, data.logo.thumbnails[constants.logoThumbnailFormat], data.logo.url);
             }
 
@@ -162,11 +162,12 @@ define([
                 var url = (!!curMediaId) ?
                     '/admin/api/media/' + curMediaId + '?action=new-version' :
                     '/admin/api/media?collection=' + this.formOptions.accountAvatarCollection;
+                
+                url = url + '&locale=' + encodeURIComponent(this.sandbox.sulu.user.locale);
 
                 // if possible, change the title of the logo to the name of the account
                 if (!!data.name) {
                     url = url + '&title=' + encodeURIComponent(data.name);
-                    url = url + '&locale=' + encodeURIComponent(this.sandbox.sulu.user.locale);
                 }
 
                 return url;
@@ -441,21 +442,10 @@ define([
                 this.updateBankAccountAddIcon(this.numberOfBankAccounts);
             }, this);
 
-            this.sandbox.on('husky.toggler.sulu-toolbar.changed', this.toggleDisableAccount.bind(this));
-
             this.sandbox.on('husky.dropzone.account-logo.success', function(file, response) {
                 this.saveLogoData(response);
                 this.updateLogoContainer(response.id, response.thumbnails[constants.logoThumbnailFormat], response.url);
             }, this);
-        },
-
-        /**
-         * Disables or enables the account
-         * @param disable {Boolean} true to disable, false to enable
-         */
-        toggleDisableAccount: function(disable) {
-            this.data.disabled = !!disable;
-            this.sandbox.emit('sulu.tab.dirty');
         },
 
         /**

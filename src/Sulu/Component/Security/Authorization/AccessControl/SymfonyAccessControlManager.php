@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -143,6 +143,21 @@ class SymfonyAccessControlManager implements AccessControlManagerInterface
      * @return array
      */
     public function getUserPermissions(SecurityCondition $securityCondition, UserInterface $user)
+    {
+        // This class only exists for BC reasons, so new methods in the interface won't be implemented here
+    }
+
+    /**
+     * Returns the permissions regarding an array of role permissions and its security context for a given user.
+     *
+     * @param string $locale
+     * @param string $securityContext
+     * @param $objectPermissionsByRole
+     * @param UserInterface $user The user for which the security is returned
+     *
+     * @return array
+     */
+    public function getUserPermissionByArray($locale, $securityContext, $objectPermissionsByRole, UserInterface $user)
     {
         // This class only exists for BC reasons, so new methods in the interface won't be implemented here
     }

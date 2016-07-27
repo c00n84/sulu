@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -114,23 +115,6 @@ class ContentType extends ComplexContentType implements ContentTypeExportInterfa
     /**
      * {@inheritdoc}
      */
-    public function readForPreview(
-        $data,
-        PropertyInterface $property,
-        $webspaceKey,
-        $languageCode,
-        $segmentKey
-    ) {
-        if ($data instanceof ArrayableInterface) {
-            $data = $data->toArray();
-        }
-
-        $property->setValue($data);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function write(
         NodeInterface $node,
         PropertyInterface $property,
@@ -203,6 +187,7 @@ class ContentType extends ComplexContentType implements ContentTypeExportInterfa
                 'presentAs' => $configuration->hasPresentAs(),
             ],
             'datasource' => $configuration->getDatasource(),
+            'deep_link' => new PropertyParameter('deep_link', $configuration->getDeepLink()),
         ];
 
         return array_merge(
@@ -286,7 +271,7 @@ class ContentType extends ComplexContentType implements ContentTypeExportInterfa
             'locale' => $property->getStructure()->getLanguageCode(),
         ];
 
-        if (isset($params['max_per_page']) && $configuration->getPaginated()) {
+        if (isset($params['max_per_page']) && $configuration->hasPagination()) {
             // is paginated
             $page = $this->getCurrentPage($params['page_parameter']->getValue());
             $pageSize = intval($params['max_per_page']->getValue());
@@ -313,7 +298,7 @@ class ContentType extends ComplexContentType implements ContentTypeExportInterfa
         $filters['page'] = $page;
         $filters['hasNextPage'] = $data->getHasNextPage();
         $filters['referencedUuids'] = $data->getReferencedUuids();
-        $filters['paginated'] = $configuration->getPaginated();
+        $filters['paginated'] = $configuration->hasPagination();
         $property->setValue($filters);
 
         // save result in cache

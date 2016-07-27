@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -34,6 +34,20 @@ class PageBridge extends StructureBridge implements PageInterface
     public function getUrls()
     {
         return $this->inspector->getLocalizedUrlsForPage($this->getDocument());
+    }
+
+    public function getLanguageCode()
+    {
+        if (!$this->document) {
+            return $this->locale;
+        }
+
+        // return original locale for shadow or ghost pages
+        if ($this->getIsShadow() || ($this->getType() && $this->getType()->getName() === 'ghost')) {
+            return $this->inspector->getOriginalLocale($this->getDocument());
+        }
+
+        return parent::getLanguageCode();
     }
 
     /**

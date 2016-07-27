@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -81,6 +81,14 @@ class MemoizedNavigationTwigExtension extends \Twig_Extension implements Navigat
     public function breadcrumbFunction($uuid)
     {
         return $this->memoizeCache->memoize([$this->extension, 'breadcrumbFunction'], $this->lifeTime);
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function navigationIsActiveFunction($requestUrl, $itemUrl)
+    {
+        return $this->memoizeCache->memoize([$this->extension, 'navigationIsActiveFunction'], $this->lifeTime);
     }
 
     /**

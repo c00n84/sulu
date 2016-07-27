@@ -32,14 +32,16 @@
           padding-top: 30px;
 
           .head-container {
-            width: 100px;
+            width: 160px;
             margin: 0 auto;
             text-align: center;
 
             .head-image {
               height: 100px;
+              margin: 0 auto;
               overflow: hidden;
               position: relative;
+              width: 100px;
               z-index: 0;
 
               &.no-default {

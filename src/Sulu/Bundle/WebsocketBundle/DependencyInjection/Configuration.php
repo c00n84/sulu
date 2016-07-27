@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -27,7 +27,9 @@ class Configuration implements ConfigurationInterface
         $treeBuilder = new TreeBuilder();
         $rootNode = $treeBuilder->root('sulu_websocket');
 
-        $rootNode->children()
+        $rootNode
+            ->children()
+                ->booleanNode('enabled')->defaultFalse()->end()
                 ->arrayNode('server')
                     ->addDefaultsIfNotSet()
                     ->children()

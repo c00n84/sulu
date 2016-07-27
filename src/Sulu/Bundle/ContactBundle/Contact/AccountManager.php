@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -70,15 +70,15 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     }
 
     /**
-     * adds an address to the entity.
+     * Adds an address to the entity.
      *
      * @param AccountApi $account The entity to add the address to
      * @param AddressEntity $address The address to be added
      * @param bool $isMain Defines if the address is the main Address of the contact
      *
-     * @return AccountAddressEntity
-     *
      * @throws \Exception
+     *
+     * @return AccountAddressEntity
      */
     public function addAddress($account, AddressEntity $address, $isMain = false)
     {
@@ -100,14 +100,15 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     }
 
     /**
-     * removes the address relation from a contact and also deletes the address if it has no more relations.
+     * Removes the address relation from a contact and also deletes the address
+     * if it has no more relations.
      *
      * @param AccountInterface $account
      * @param AccountAddressEntity $accountAddress
      *
-     * @return mixed|void
-     *
      * @throws \Exception
+     *
+     * @return mixed|void
      */
     public function removeAddressRelation($account, $accountAddress)
     {
@@ -115,7 +116,7 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
             throw new \Exception('Account and AccountAddress cannot be null');
         }
 
-        // reload address to get all data (including relational data)
+        // Reload address to get all data (including relational data).
         /** @var AddressEntity $address */
         $address = $accountAddress->getAddress();
         $address = $this->em->getRepository('SuluContactBundle:Address')
@@ -123,16 +124,16 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
 
         $isMain = $accountAddress->getMain();
 
-        // remove relation
+        // Remove relation.
         $address->removeAccountAddress($accountAddress);
         $account->removeAccountAddress($accountAddress);
 
-        // if was main, set a new one
+        // If was main, set a new one.
         if ($isMain) {
             $this->setMainForCollection($account->getAccountContacts());
         }
 
-        // delete address if it has no more relations
+        // Delete address if it has no more relations.
         if (!$address->hasRelations()) {
             $this->em->remove($address);
         }
@@ -155,8 +156,8 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     /**
      * Gets account by id.
      *
-     * @param $id
-     * @param $locale
+     * @param int $id
+     * @param string $locale
      *
      * @throws EntityNotFoundException
      *
@@ -175,8 +176,8 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     /**
      * Returns account entities by ids.
      *
-     * @param $ids
-     * @param $locale
+     * @param array $ids
+     * @param string $locale
      *
      * @return array
      */
@@ -199,13 +200,13 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     /**
      * Gets account by id - can include relations.
      *
-     * @param $id
-     * @param $locale
-     * @param $includes
-     *
-     * @return AccountApi
+     * @param int $id
+     * @param string $locale
+     * @param array $includes
      *
      * @throws EntityNotFoundException
+     *
+     * @return AccountApi
      */
     public function getByIdAndInclude($id, $locale, $includes)
     {
@@ -221,8 +222,8 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     /**
      * Returns contacts by account id.
      *
-     * @param $id
-     * @param $locale
+     * @param int $id
+     * @param string $locale
      * @param bool $onlyFetchMainAccounts
      *
      * @return array|null
@@ -264,7 +265,7 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     /**
      * Returns all accounts.
      *
-     * @param $locale
+     * @param string $locale
      * @param null $filter
      *
      * @return array|null
@@ -307,6 +308,43 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
     }
 
     /**
+     * {@inheritdoc}
+     */
+    public function deleteAllRelations($entity)
+    {
+        parent::deleteAllRelations($entity);
+        $this->deleteBankAccounts($entity);
+    }
+
+    /**
+     * Deletes (not just removes) all bank-accounts which are assigned to a contact.
+     *
+     * @param $entity
+     */
+    public function deleteBankAccounts($entity)
+    {
+        /** @var Account $entity */
+        if ($entity->getBankAccounts()) {
+            $this->deleteAllEntitiesOfCollection($entity->getBankAccounts());
+        }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function findByFilters($filters, $page, $pageSize, $limit, $locale, $options = [])
+    {
+        $entities = $this->accountRepository->findByFilters($filters, $page, $pageSize, $limit, $locale, $options);
+
+        return array_map(
+            function ($contact) use ($locale) {
+                return $this->getApiObject($contact, $locale);
+            },
+            $entities
+        );
+    }
+
+    /**
      * Takes a account entity and a locale and returns the api object.
      *
      * @param Account $account
@@ -323,43 +361,5 @@ class AccountManager extends AbstractContactManager implements DataProviderRepos
         }
 
         return $apiObject;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function deleteAllRelations($entity)
-    {
-        parent::deleteAllRelations($entity);
-        // add bank-accounts for accounts
-        $this->deleteBankAccounts($entity);
-    }
-
-    /**
-     * deletes (not just removes) all bank-accounts which are assigned to a contact.
-     *
-     * @param $entity
-     */
-    public function deleteBankAccounts($entity)
-    {
-        /** @var Account $entity */
-        if ($entity->getBankAccounts()) {
-            $this->deleteAllEntitiesOfCollection($entity->getBankAccounts());
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function findByFilters($filters, $page, $pageSize, $limit, $locale)
-    {
-        $entities = $this->accountRepository->findByFilters($filters, $page, $pageSize, $limit, $locale);
-
-        return array_map(
-            function ($contact) use ($locale) {
-                return $this->getApiObject($contact, $locale);
-            },
-            $entities
-        );
     }
 }

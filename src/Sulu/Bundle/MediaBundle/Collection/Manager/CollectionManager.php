@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -28,6 +28,7 @@ use Sulu\Component\Rest\ListBuilder\Doctrine\FieldDescriptor\DoctrineFieldDescri
 use Sulu\Component\Rest\ListBuilder\Doctrine\FieldDescriptor\DoctrineJoinDescriptor;
 use Sulu\Component\Security\Authentication\UserInterface;
 use Sulu\Component\Security\Authentication\UserRepositoryInterface;
+use Sulu\Component\Security\Authorization\PermissionTypes;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 /**
@@ -97,7 +98,7 @@ class CollectionManager implements CollectionManagerInterface
         FormatManagerInterface $formatManager,
         UserRepositoryInterface $userRepository,
         EntityManager $em,
-        TokenStorageInterface $tokenStorage,
+        TokenStorageInterface $tokenStorage = null,
         $collectionPreviewFormat,
         $permissions
     ) {
@@ -127,7 +128,7 @@ class CollectionManager implements CollectionManagerInterface
             $collectionEntity,
             $sortBy,
             $this->getCurrentUser(),
-            $this->permissions['view']
+            $this->permissions[PermissionTypes::VIEW]
         );
 
         $breadcrumbEntities = null;
@@ -172,16 +173,49 @@ class CollectionManager implements CollectionManagerInterface
     /**
      * {@inheritdoc}
      */
-    public function getTree($locale, $offset, $limit, $search, $depth = 0, $sortBy = [])
+    public function getTreeById($id, $locale)
+    {
+        $collectionSet = $this->collectionRepository->findTree($id, $locale);
+
+        /** @var Collection[] $collections sorted by id */
+        $collections = [];
+        /** @var Collection[] $result collections without parent */
+        $result = [];
+        foreach ($collectionSet as $collection) {
+            $apiEntity = new Collection($collection, $locale);
+            $this->addPreview($apiEntity);
+
+            $collections[$collection->getId()] = $apiEntity;
+
+            if ($collection->getParent() !== null) {
+                $collections[$collection->getParent()->getId()]->addChild($apiEntity);
+            } else {
+                $result[] = $apiEntity;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getTree($locale, $offset, $limit, $search, $depth = 0, $sortBy = [], $systemCollections = true)
     {
         /** @var Paginator $collectionSet */
         $collectionSet = $this->collectionRepository->findCollectionSet(
             $depth,
-            ['offset' => $offset, 'limit' => $limit, 'search' => $search, 'locale' => $locale],
+            [
+                'offset' => $offset,
+                'limit' => $limit,
+                'search' => $search,
+                'locale' => $locale,
+                'systemCollections' => $systemCollections,
+            ],
             null,
             $sortBy,
             $this->getCurrentUser(),
-            $this->permissions['view']
+            $this->permissions[PermissionTypes::VIEW]
         );
 
         $collections = [];

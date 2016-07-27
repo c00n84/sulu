@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -12,15 +12,16 @@
 namespace Sulu\Component\Content\Types\Rlp\Mapper;
 
 use DateTime;
+use PHPCR\ItemExistsException;
 use PHPCR\NodeInterface;
 use PHPCR\PathNotFoundException;
-use PHPCR\PropertyInterface;
-use PHPCR\SessionInterface;
-use PHPCR\Util\PathHelper;
+use Sulu\Bundle\DocumentManagerBundle\Bridge\DocumentInspector;
+use Sulu\Component\Content\Document\Behavior\ResourceSegmentBehavior;
 use Sulu\Component\Content\Exception\ResourceLocatorAlreadyExistsException;
 use Sulu\Component\Content\Exception\ResourceLocatorMovedException;
 use Sulu\Component\Content\Exception\ResourceLocatorNotFoundException;
 use Sulu\Component\Content\Types\Rlp\ResourceLocatorInformation;
+use Sulu\Component\DocumentManager\DocumentManagerInterface;
 use Sulu\Component\PHPCR\SessionManager\SessionManagerInterface;
 
 class PhpcrMapper extends RlpMapper
@@ -31,62 +32,75 @@ class PhpcrMapper extends RlpMapper
     private $sessionManager;
 
     /**
-     * @param SessionManagerInterface $sessionManager
+     * @var DocumentManagerInterface
      */
-    public function __construct(SessionManagerInterface $sessionManager)
-    {
+    private $documentManager;
+
+    /**
+     * @var DocumentInspector
+     */
+    private $documentInspector;
+
+    public function __construct(
+        SessionManagerInterface $sessionManager,
+        DocumentManagerInterface $documentManager,
+        DocumentInspector $documentInspector
+    ) {
         $this->sessionManager = $sessionManager;
+        $this->documentManager = $documentManager;
+        $this->documentInspector = $documentInspector;
     }
 
     /**
-     * creates a new route for given path.
-     *
-     * @param NodeInterface $contentNode  reference node
-     * @param string        $path         path to generate
-     * @param string        $webspaceKey  key of webspace
-     * @param string        $languageCode
-     * @param string        $segmentKey
+     * {@inheritdoc}
      */
-    public function save(NodeInterface $contentNode, $path, $webspaceKey, $languageCode, $segmentKey = null)
+    public function save(ResourceSegmentBehavior $document)
     {
-        $routes = $this->getWebspaceRouteNode($webspaceKey, $languageCode, $segmentKey);
+        $path = $document->getResourceSegment();
 
-        // check if route already exists
-        if ($this->checkResourceLocator($routes, $path, $contentNode)) {
-            return;
+        $webspaceKey = $this->documentInspector->getWebspace($document);
+        $locale = $this->documentInspector->getLocale($document);
+        $segmentKey = null;
+        $webspaceRouteRootPath = $this->getWebspaceRouteNodeBasePath($webspaceKey, $locale, $segmentKey);
+
+        try {
+            $routeNodePath = $this->loadByContent(
+                $this->documentInspector->getNode($document),
+                $webspaceKey,
+                $locale,
+                $segmentKey
+            );
+
+            $routeDocument = $this->documentManager->find(
+                $webspaceRouteRootPath . $routeNodePath,
+                $locale,
+                ['rehydrate' => false]
+            );
+            $routeDocumentPath = $webspaceRouteRootPath . $routeNodePath;
+        } catch (ResourceLocatorNotFoundException $e) {
+            $routeDocument = $this->documentManager->create('route');
+            $routeDocumentPath = $webspaceRouteRootPath . $path;
         }
 
-        // create root recursive
-        $routePath = explode('/', ltrim($path, '/'));
-        $node = $routes;
-        foreach ($routePath as $path) {
-            if ($path != '') {
-                if ($node->hasNode($path)) {
-                    $node = $node->getNode($path);
-                } else {
-                    $node = $node->addNode($path, 'nt:unstructured');
-                }
-            }
-        }
-        $this->sessionManager->getSession()->save();
+        $routeDocument->setTargetDocument($document);
 
-        $node->addMixin('sulu:path');
-        $node->setProperty('sulu:content', $contentNode);
-        $node->setProperty('sulu:history', false);
-        $node->setProperty('sulu:created', new DateTime());
+        try {
+            $this->documentManager->persist(
+                $routeDocument,
+                $locale,
+                [
+                    'path' => $routeDocumentPath,
+                    'auto_create' => true,
+                ]
+            );
+            $this->documentManager->publish($routeDocument, $locale);
+        } catch (ItemExistsException $e) {
+            throw new ResourceLocatorAlreadyExistsException($document->getResourceSegment(), $routeDocumentPath);
+        }
     }
 
     /**
-     * returns path for given contentNode.
-     *
-     * @param NodeInterface $contentNode  reference node
-     * @param string        $webspaceKey  key of portal
-     * @param string        $languageCode
-     * @param string        $segmentKey
-     *
-     * @throws ResourceLocatorNotFoundException
-     *
-     * @return NodeInterface path
+     * {@inheritdoc}
      */
     public function loadByContent(NodeInterface $contentNode, $webspaceKey, $languageCode, $segmentKey = null)
     {
@@ -115,10 +129,10 @@ class PhpcrMapper extends RlpMapper
      * Iterates over all route nodes assigned by the given node, and executes the callback on it.
      *
      * @param NodeInterface $node
-     * @param callable      $callback     will be called foreach route node (stops and return value if not false)
-     * @param string        $webspaceKey
-     * @param string        $languageCode
-     * @param string        $segmentKey
+     * @param callable $callback will be called foreach route node (stops and return value if not false)
+     * @param string $webspaceKey
+     * @param string $languageCode
+     * @param string $segmentKey
      *
      * @return \PHPCR\NodeInterface
      */
@@ -132,10 +146,16 @@ class PhpcrMapper extends RlpMapper
         if ($node->isNew()) {
             return;
         }
+
+        $routePath = $this->sessionManager->getRoutePath($webspaceKey, $languageCode);
+
         // search for references with name 'content'
         foreach ($node->getReferences('sulu:content') as $ref) {
             if ($ref instanceof \PHPCR\PropertyInterface) {
                 $routeNode = $ref->getParent();
+                if (0 !== strpos($routeNode->getPath(), $routePath)) {
+                    continue;
+                }
 
                 $resourceLocator = $this->getResourceLocator(
                     $ref->getParent()->getPath(),
@@ -155,16 +175,7 @@ class PhpcrMapper extends RlpMapper
     }
 
     /**
-     * returns path for given contentNode.
-     *
-     * @param string $uuid         uuid of contentNode
-     * @param string $webspaceKey  key of portal
-     * @param string $languageCode
-     * @param string $segmentKey
-     *
-     * @throws ResourceLocatorNotFoundException
-     *
-     * @return NodeInterface path
+     * {@inheritdoc}
      */
     public function loadByContentUuid($uuid, $webspaceKey, $languageCode, $segmentKey = null)
     {
@@ -200,6 +211,11 @@ class PhpcrMapper extends RlpMapper
 
         // iterate over history of path node
         $result = [];
+
+        if (!$pathNode) {
+            return $result;
+        }
+
         $this->iterateRouteNodes(
             $pathNode,
             function ($resourceLocator, NodeInterface $node) use (&$result) {
@@ -232,17 +248,7 @@ class PhpcrMapper extends RlpMapper
     }
 
     /**
-     * returns the uuid of referenced content node.
-     *
-     * @param string $resourceLocator requested RL
-     * @param string $webspaceKey     key of portal
-     * @param string $languageCode
-     * @param string $segmentKey
-     *
-     * @throws ResourceLocatorMovedException    resourceLocator has been moved
-     * @throws ResourceLocatorNotFoundException resourceLocator not found or has no content reference
-     *
-     * @return string uuid of content node
+     * {@inheritdoc}
      */
     public function loadByResourceLocator($resourceLocator, $webspaceKey, $languageCode, $segmentKey = null)
     {
@@ -290,14 +296,7 @@ class PhpcrMapper extends RlpMapper
     }
 
     /**
-     * checks if given path is unique.
-     *
-     * @param string $path
-     * @param string $webspaceKey  key of portal
-     * @param string $languageCode
-     * @param string $segmentKey
-     *
-     * @return bool
+     * {@inheritdoc}
      */
     public function unique($path, $webspaceKey, $languageCode, $segmentKey = null)
     {
@@ -307,14 +306,7 @@ class PhpcrMapper extends RlpMapper
     }
 
     /**
-     * returns a unique path with "-1" if necessary.
-     *
-     * @param string $path
-     * @param string $webspaceKey  key of portal
-     * @param string $languageCode
-     * @param string $segmentKey
-     *
-     * @return string
+     * {@inheritdoc}
      */
     public function getUniquePath($path, $webspaceKey, $languageCode, $segmentKey = null)
     {
@@ -339,135 +331,26 @@ class PhpcrMapper extends RlpMapper
     }
 
     /**
-     * creates a new resourcelocator and creates the correct history.
-     *
-     * @param string $src          old resource locator
-     * @param string $dest         new resource locator
-     * @param string $webspaceKey  key of portal
-     * @param string $languageCode
-     * @param string $segmentKey
-     *
-     * @throws ResourceLocatorMovedException
-     * @throws ResourceLocatorNotFoundException
-     */
-    public function move($src, $dest, $webspaceKey, $languageCode, $segmentKey = null)
-    {
-        // get abs path
-        $absDestPath = $this->getPath($dest, $webspaceKey, $languageCode, $segmentKey);
-        $absSrcPath = $this->getPath($src, $webspaceKey, $languageCode, $segmentKey);
-
-        // init session
-        $session = $this->sessionManager->getSession();
-        $rootNode = $session->getRootNode();
-        $workspace = $session->getWorkspace();
-        $routes = $this->getWebspaceRouteNode($webspaceKey, $languageCode, $segmentKey);
-
-        $routeNode = $routes->getNode(ltrim($src, '/'));
-        if (!$routeNode->hasProperty('sulu:content')) {
-            throw new ResourceLocatorNotFoundException();
-        } elseif ($routeNode->getPropertyValue('sulu:history')) {
-            $realPath = $routeNode->getPropertyValue('sulu:content');
-
-            throw new ResourceLocatorMovedException(
-                $this->getResourceLocator($realPath->getPath(), $webspaceKey, $languageCode, $segmentKey),
-                $realPath->getIdentifier()
-            );
-        }
-
-        $contentNode = $routeNode->getPropertyValue('sulu:content');
-
-        // check if route already exists
-        if ($this->checkResourceLocator($routes, $dest, $contentNode)) {
-            return;
-        }
-
-        // create parent node for dest path
-        $parentAbsDestPath = PathHelper::normalizePath($absDestPath . '/..');
-        $this->createRecursive($parentAbsDestPath, $rootNode);
-        $session->save();
-
-        // copy route to new
-        $workspace->copy($absSrcPath, $absDestPath);
-        $destNode = $routes->getNode(ltrim($dest, '/'));
-        $destNode->setProperty('sulu:created', new DateTime());
-        $session->save();
-        $session->refresh(true);
-
-        // change old route node to history
-        $this->changePathToHistory($routeNode, $session, $absSrcPath, $absDestPath);
-        $session->save();
-
-        // get all old routes (in old route tree)
-        $qm = $workspace->getQueryManager();
-        $sql = "SELECT *
-                FROM [nt:unstructured]
-                WHERE ISDESCENDANTNODE('" . $absSrcPath . "')
-                AND [jcr:mixinTypes] = 'sulu:path'";
-
-        $query = $qm->createQuery($sql, 'JCR-SQL2');
-        $result = $query->execute();
-
-        /** @var NodeInterface $node */
-        foreach ($result->getNodes() as $node) {
-            // FIXME move in SQL statement?
-            if ($node->getPath() != $absDestPath) {
-                $this->changePathToHistory($node, $session, $absSrcPath, $absDestPath);
-            }
-        }
-    }
-
-    /**
      * {@inheritdoc}
      */
     public function deleteByPath($path, $webspaceKey, $languageCode, $segmentKey = null)
     {
-        $session = $this->sessionManager->getSession();
-        $routeNode = $session->getNode($this->getPath($path, $webspaceKey, $languageCode, $segmentKey));
-        $this->deleteByNode($routeNode, $session, $webspaceKey, $languageCode, $segmentKey);
-        $session->save();
+        if (!is_string($path) || trim($path, '/') == '') {
+            throw new \InvalidArgumentException(
+                sprintf('The path to delete must be a non-empty string, "%s" given.', $path)
+            );
+        }
+
+        $routeDocument = $this->documentManager->find(
+            $this->getPath($path, $webspaceKey, $languageCode, $segmentKey),
+            $languageCode
+        );
+
+        $this->documentManager->remove($routeDocument);
     }
 
     /**
      * {@inheritdoc}
-     */
-    private function deleteByNode(
-        NodeInterface $node,
-        SessionInterface $session,
-        $webspaceKey,
-        $languageCode,
-        $segmentKey = null
-    ) {
-        if ($node->getPropertyValue('sulu:history') !== true) {
-            // search for history nodes
-            $this->iterateRouteNodes(
-                $node,
-                function ($resourceLocator, NodeInterface $historyNode) use (
-                    $session,
-                    $webspaceKey,
-                    $languageCode,
-                    $segmentKey
-                ) {
-                    // delete history nodes
-                    $this->deleteByNode($historyNode, $session, $webspaceKey, $languageCode, $segmentKey);
-                    $session->save();
-                },
-                $webspaceKey,
-                $languageCode,
-                $segmentKey
-            );
-        }
-        $node->remove();
-    }
-
-    /**
-     * returns resource locator for parent node.
-     *
-     * @param string $uuid
-     * @param string $webspaceKey
-     * @param string $languageCode
-     * @param string $segmentKey
-     *
-     * @return NodeInterface|null
      */
     public function getParentPath($uuid, $webspaceKey, $languageCode, $segmentKey = null)
     {
@@ -484,127 +367,10 @@ class PhpcrMapper extends RlpMapper
     }
 
     /**
-     * {@inheritdoc}
-     */
-    public function restoreByPath($path, $webspaceKey, $languageCode, $segmentKey = null)
-    {
-        $rootNode = $this->getWebspaceRouteNode($webspaceKey, $languageCode, $segmentKey);
-        $newRouteNode = $rootNode->getNode(ltrim($path, '/'));
-        $currentRouteNode = $newRouteNode->getPropertyValue('sulu:content');
-        $contentNode = $currentRouteNode->getPropertyValue('sulu:content');
-
-        // change other history connections
-        $this->iterateRouteNodes(
-            $currentRouteNode,
-            function ($resourceLocator, NodeInterface $node) use (&$newRouteNode) {
-                if ($node->getPropertyValue('sulu:history') === true) {
-                    $node->setProperty('sulu:content', $newRouteNode);
-                }
-
-                return false;
-            },
-            $webspaceKey,
-            $languageCode,
-            $segmentKey
-        );
-
-        // change history
-        $newRouteNode->setProperty('sulu:history', false);
-        $currentRouteNode->setProperty('sulu:history', true);
-
-        // set creation date
-        $newRouteNode->setProperty('sulu:created', new DateTime());
-        $currentRouteNode->setProperty('sulu:created', new DateTime());
-
-        // set content
-        $newRouteNode->setProperty('sulu:content', $contentNode);
-        $currentRouteNode->setProperty('sulu:content', $newRouteNode);
-
-        // save session
-        $this->sessionManager->getSession()->save();
-    }
-
-    /**
-     * create a node recursively.
-     *
-     * @param string        $path     path to node
-     * @param NodeInterface $rootNode base node to begin
-     */
-    private function createRecursive($path, $rootNode)
-    {
-        $pathParts = explode('/', ltrim($path, '/'));
-        $curNode = $rootNode;
-        for ($i = 0; $i < count($pathParts); ++$i) {
-            if ($curNode->hasNode($pathParts[$i])) {
-                $curNode = $curNode->getNode($pathParts[$i]);
-            } else {
-                $curNode = $curNode->addNode($pathParts[$i]);
-                $curNode->addMixin('mix:referenceable');
-            }
-        }
-    }
-
-    /**
-     * changes path node to history node.
-     *
-     * @param NodeInterface    $node
-     * @param SessionInterface $session
-     * @param string           $absSrcPath
-     * @param string           $absDestPath
-     */
-    private function changePathToHistory(NodeInterface $node, SessionInterface $session, $absSrcPath, $absDestPath)
-    {
-        // get new path node
-        $relPath = str_replace($absSrcPath, '', $node->getPath());
-        $newPath = PathHelper::normalizePath($absDestPath . $relPath);
-        $newPathNode = $session->getNode($newPath);
-
-        // set history to true and set content to new path
-        $node->setProperty('sulu:content', $newPathNode);
-        $node->setProperty('sulu:history', true);
-
-        // get referenced history
-        /** @var PropertyInterface $property */
-        foreach ($node->getReferences('sulu:content') as $property) {
-            $property->getParent()->setProperty('sulu:content', $newPathNode);
-        }
-    }
-
-    /**
-     * check resourcelocator is unique and points to given content node.
-     *
-     * @param NodeInterface $routes
-     * @param string        $resourceLocator
-     * @param $contentNode
-     *
-     * @return bool
-     *
-     * @throws ResourceLocatorAlreadyExistsException
-     */
-    private function checkResourceLocator(NodeInterface $routeNode, $resourceLocator, $contentNode)
-    {
-        if (!$this->isUnique($routeNode, $resourceLocator)) {
-            $routeNode = $routeNode->getNode(ltrim($resourceLocator, '/'));
-            if ($routeNode->hasProperty('sulu:content') &&
-                $routeNode->getPropertyValue('sulu:content') == $contentNode
-            ) {
-                // route already exists and referenced on contentNode
-                return true;
-            } else {
-                throw new ResourceLocatorAlreadyExistsException(sprintf(
-                    'Resource locator "%s" already exists. Route node at path "%s"', $resourceLocator, $routeNode->getPath()
-                ));
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * check if path is unique from given $root node.
      *
      * @param NodeInterface $root route node
-     * @param string        $path requested path
+     * @param string $path requested path
      *
      * @return bool path is unique
      */
@@ -625,7 +391,6 @@ class PhpcrMapper extends RlpMapper
      */
     private function getWebspaceRouteNode($webspaceKey, $languageCode, $segmentKey)
     {
-        // trailing slash
         return $this->sessionManager->getRouteNode($webspaceKey, $languageCode, $segmentKey);
     }
 

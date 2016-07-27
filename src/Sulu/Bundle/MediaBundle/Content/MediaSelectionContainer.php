@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -156,7 +156,7 @@ class MediaSelectionContainer implements ArrayableInterface
 
     public function __isset($name)
     {
-        return ($name == 'data' || $name == 'config' || $name == 'ids' || $name == 'displayOption' || $name == 'types');
+        return $name == 'data' || $name == 'config' || $name == 'ids' || $name == 'displayOption' || $name == 'types';
     }
 
     /**

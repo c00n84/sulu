@@ -44,7 +44,7 @@ define([
 
             // when a position is selected in the company overlay
             this.sandbox.on('husky.select.company-position-select.selected.item', function(id) {
-                this.companyPosition = id;
+                this.companyPosition = this.positions[parseInt(id)];
             }, this);
 
             // receive form of address values via template
@@ -100,11 +100,15 @@ define([
         },
 
         /**
-         * Takes a contact and returns a flat version
+         * Takes a contact and returns a flat version.
+         *
          * @param contact {Object} the contact to create a flat version for
+         *
+         * @returns {Object}
          */
         toFlat = function(contact) {
-            contact.position = contact.position.position;
+            contact.position = !contact.position ? null : contact.position.position;
+
             return contact;
         },
 
@@ -172,6 +176,11 @@ define([
 
             this.sandbox.util.load('/admin/api/contact/positions')
                 .then(function(response) {
+                    this.positions = {};
+                    $.each(response._embedded.positions, function(index, item) {
+                        this.positions[item['id']] = item;
+                    }.bind(this));
+
                     this.sandbox.start([
                         {
                             name: 'select@husky',
@@ -179,11 +188,11 @@ define([
                                 el: constants.positionSelector,
                                 instanceName: 'company-position-select',
                                 valueName: 'position',
-                                returnValue: 'id',
                                 data: response._embedded.positions,
                                 noNewValues: true,
                                 deselectField: 'select.no-choice',
-                                isNative: true
+                                isNative: true,
+                                defaultLabel: this.sandbox.translate('public.please-choose')
                             }
                         }
                     ]);
@@ -236,19 +245,31 @@ define([
             });
         },
 
-    // adds a new contact relation
+        /**
+         * Adds a new contact relation.
+         */
         addContactRelation = function() {
             var contactInput = this.sandbox.dom.find(constants.contactSelector + ' input', constants.relationFormSelector),
                 id = this.sandbox.dom.data(contactInput, 'id');
-            if (!!id) {
-                AccountManager.addAccountContact(this.data.id, id, this.companyPosition);
-                ContactManager.loadOrNew(id).then(function(contact) {
-                    this.sandbox.emit('husky.datagrid.record.add', toFlat(contact));
-                }.bind(this));
+
+            if (!id) {
+                return false;
             }
+
+            AccountManager.addAccountContact(this.data.id, id, this.companyPosition)
+                .then(function(response) {
+                    ContactManager.loadOrNew(id).then(function(contact) {
+                        if (response.position) {
+                            contact.position = response.position;
+                        }
+                        this.sandbox.emit('husky.datagrid.record.add', contact);
+                    }.bind(this));
+                }.bind(this));
         };
 
     return {
+
+        stickyToolbar: 140,
 
         layout: function() {
             return {
@@ -258,7 +279,7 @@ define([
             };
         },
 
-        templates: ['/admin/contact/template/contact/list'],
+        templates: ['/admin/contact/template/account/form/contact'],
 
         initialize: function() {
             this.data = this.options.data();
@@ -269,7 +290,7 @@ define([
         },
 
         render: function() {
-            this.sandbox.dom.html(this.$el, this.renderTemplate('/admin/contact/template/contact/list'));
+            this.sandbox.dom.html(this.$el, this.renderTemplate('/admin/contact/template/account/form/contact'));
 
             // init list-toolbar and datagrid
             this.sandbox.sulu.initListToolbarAndList.call(this, 'accountsContactsFields', '/admin/api/contacts/fields?accountContacts=true',

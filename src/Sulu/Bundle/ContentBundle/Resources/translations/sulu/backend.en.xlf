@@ -4,7 +4,7 @@
         <body>
             <trans-unit id="f1234df37123123fd4a73a4123dfdf00A" resname="public.url-history.none">
                 <source>public.url-history.none</source>
-                <target>No history for this node exists ...</target>
+                <target>No history for this page exists ...</target>
             </trans-unit>
             <trans-unit id="fbf455837741abced4a73a4ba3fdf006" resname="single-internal-link.title">
                 <source>single-internal-link.title</source>
@@ -24,7 +24,7 @@
             </trans-unit>
             <trans-unit id="fbfasdf371239fbed4a73a4basdfdf006" resname="sulu.content.form.settings.type">
                 <source>sulu.content.form.settings.type</source>
-                <target>Content Type</target>
+                <target>Page Type</target>
             </trans-unit>
             <trans-unit id="fbfasdf371239fbed4a73a4123dfdf006" resname="sulu.content.form.settings.type.content">
                 <source>sulu.content.form.settings.type.content</source>
@@ -40,7 +40,7 @@
             </trans-unit>
             <trans-unit id="f1234df37123123ed4a73a4123dfdf006" resname="content.contents.settings.delete">
                 <source>content.contents.settings.delete</source>
-                <target>Delete node</target>
+                <target>Delete page</target>
             </trans-unit>
             <trans-unit id="f1234df37123123ed4a73a4123dfdf007" resname="content.contents.settings.copy">
                 <source>content.contents.settings.copy</source>
@@ -64,7 +64,7 @@
             </trans-unit>
             <trans-unit id="f1234df37123123ed4a73a4123dfdf00C" resname="content.contents.settings.order.title">
                 <source>content.contents.settings.order.title</source>
-                <target>Place node</target>
+                <target>Place page</target>
             </trans-unit>
             <trans-unit id="92762f7528ee1cbcd85bf435fd03c846" resname="smart-content.nocontent-found">
                 <source>smart-content.nocontent-found</source>
@@ -204,11 +204,11 @@
             </trans-unit>
             <trans-unit id="18fe4f5f2d5a25f1a9b5360e0bd18bfa" resname="content.delete.dialog.title">
                 <source>content.delete.dialog.title</source>
-                <target>Delete Node</target>
+                <target>Delete page</target>
             </trans-unit>
             <trans-unit id="0c64601205aa73314446c02e5a3dd4c8" resname="content.delete.dialog.content">
                 <source>content.delete.dialog.content</source>
-                <target>Do you realy want to delete the selected node?</target>
+                <target>Do you realy want to delete the selected page?</target>
             </trans-unit>
             <trans-unit id="18ffe800b505f7d878907c67d7fb1be4" resname="content.delete.dialog.cancel">
                 <source>content.delete.dialog.cancel</source>
@@ -221,10 +221,6 @@
             <trans-unit id="e8a77e532dfb3d0614824b7349d7b680" resname="content.contents.show-ghost-pages">
                 <source>content.contents.show-ghost-pages</source>
                 <target>Show ghosts and shadow pages</target>
-            </trans-unit>
-            <trans-unit id="9d6ff6ec28392e6c52d795266f34743e" resname="content.preview.resolutions">
-                <source>content.preview.resolutions</source>
-                <target>Resolutions</target>
             </trans-unit>
             <trans-unit id="fd7f7507a45f470925dd0e3257b20da2" resname="sulu.content.add-type">
                 <source>sulu.content.add-type</source>
@@ -242,21 +238,29 @@
                 <source>smart-content.choose-data-source</source>
                 <target>Choose data source</target>
             </trans-unit>
-            <trans-unit id="90a3276459ba0f52ef7a4d320298d5d" resname="smart-content.choose-data-source.cancel">
-                <source>smart-content.choose-data-source.cancel</source>
+            <trans-unit id="90a3276459ba0f52ef7a4d320298d5d" resname="smart-content.choose-data-source.reset">
+                <source>smart-content.choose-data-source.reset</source>
                 <target>Reset</target>
+            </trans-unit>
+            <trans-unit id="90a3276459ba0f52ef7a41320298d5d" resname="smart-content.choose-data-source.cancel">
+                <source>smart-content.choose-data-source.back</source>
+                <target>Back</target>
+            </trans-unit>
+            <trans-unit id="443d99ff2f64652633a5ca2169f22211" resname="sulu.content.seo.serp">
+                <source>sulu.content.seo.serp</source>
+                <target>Search Engine Results Pages Preview (SERP)</target>
             </trans-unit>
             <trans-unit id="443d99ff2f64652633a5ca2169f22254" resname="sulu.content.seo.title">
                 <source>sulu.content.seo.title</source>
-                <target>Title</target>
+                <target>Title (Meta Title)</target>
             </trans-unit>
             <trans-unit id="441d99ff2f64652633a5ca2169f22254" resname="sulu.content.seo.description">
                 <source>sulu.content.seo.description</source>
-                <target>Description</target>
+                <target>Description (Meta Description)</target>
             </trans-unit>
             <trans-unit id="442d99ff2f64652633a5ca2169f22254" resname="sulu.content.seo.keywords">
                 <source>sulu.content.seo.keywords</source>
-                <target>Keywords</target>
+                <target>Keywords (Meta Keywords)</target>
             </trans-unit>
             <trans-unit id="445d99ff2f64652633a5ca2169f22254" resname="sulu.content.seo.canonical">
                 <source>sulu.content.seo.canonical</source>
@@ -306,6 +310,10 @@
                 <source>sulu.content.seo.keywords-left</source>
                 <target>keywords left</target>
             </trans-unit>
+            <trans-unit id="c50af522ac181350142c0b4720e29a2e" resname="sulu.content.seo.title.note">
+                <source>sulu.content.seo.title.note</source>
+                <target>The meta title is limited to 55 characters.</target>
+            </trans-unit>
             <trans-unit id="c50af522ac181350142c0b4720e29a2f" resname="sulu.content.seo.descriptions.note">
                 <source>sulu.content.seo.descriptions.note</source>
                 <target>The meta description is limited to 155 characters.</target>
@@ -316,15 +324,15 @@
             </trans-unit>
             <trans-unit id="f1234df37123123ed4a7343623dfdf010" resname="sulu.content.form.settings.nav-contexts">
                 <source>sulu.content.form.settings.nav-contexts</source>
-                <target>Navigation context</target>
+                <target>Show page in</target>
             </trans-unit>
             <trans-unit id="f1234df37123123ed4a7343623dfdf011" resname="sulu.content.form.settings.all-nav-contexts">
                 <source>sulu.content.form.settings.all-nav-contexts</source>
-                <target>All navigation contexts chosen ...</target>
+                <target>All navigations</target>
             </trans-unit>
             <trans-unit id="f1234df37123123ed4a7343623dfdf012" resname="sulu.content.form.settings.no-nav-contexts">
                 <source>sulu.content.form.settings.no-nav-contexts</source>
-                <target>No navigation contexts chosen ...</target>
+                <target>No navigation</target>
             </trans-unit>
             <trans-unit id="aaaaaaf371239fbed4a73a4123dfdf008" resname="sulu.content.form.settings.shadow_page">
                 <source>sulu.content.form.settings.shadow_page</source>
@@ -431,10 +439,6 @@
                 <source>content.contents.settings.copy-locales.default-label</source>
                 <target>Choose language ...</target>
             </trans-unit>
-            <trans-unit id="abaaaaa382148fbed4a73a4123dfdf028" resname="content.contents.start-preview">
-                <source>content.contents.start-preview</source>
-                <target>Start preview</target>
-            </trans-unit>
             <trans-unit id="abaaaaa382148fbed4a73a4123dfdf030" resname="sulu.content.form.settings.changelog">
                 <source>sulu.content.form.settings.changelog</source>
                 <target>Changelog</target>
@@ -481,7 +485,7 @@
             </trans-unit>
             <trans-unit id="75435af307a7ae8f965923968a0e0f94" resname="labels.error.content-save-desc">
                 <source>labels.error.content-save-desc</source>
-                <target>Node could not be saved.</target>
+                <target>Page could not be saved.</target>
             </trans-unit>
             <trans-unit id="75435af3a7a7a38f968923968a0e0f94" resname="labels.error.content-save-resource-locator">
                 <source>labels.error.content-save-resource-locator</source>
@@ -489,11 +493,15 @@
             </trans-unit>
             <trans-unit id="2647c238cae0fa45d7fbad336e43750f" resname="labels.success.content-deleted-desc">
                 <source>labels.success.content-deleted-desc</source>
-                <target>Node successfully deleted.</target>
+                <target>Page successfully deleted.</target>
             </trans-unit>
             <trans-unit id="487f946d51783a9899fa59d31dcfc3e8" resname="labels.success.content-save-desc">
                 <source>labels.success.content-save-desc</source>
-                <target>Node sucessfully saved</target>
+                <target>Page sucessfully saved</target>
+            </trans-unit>
+            <trans-unit id="497e046d51783a9899fa59d31dcfc3e8" resname="labels.success.copy-locale-desc">
+                <source>labels.success.copy-locale-desc</source>
+                <target>Page successfully copied</target>
             </trans-unit>
             <trans-unit id="e4b14069a8a085ede2092hf51234dh40" resname="smart-content.categories.label">
                 <source>smart-content.categories.label</source>
@@ -517,7 +525,7 @@
             </trans-unit>
             <trans-unit id="e4b14069a8a085ede2092hf51234dh45" resname="smart-content.categories.use-any-category">
                 <source>smart-content.categories.use-any-category</source>
-                <target>Use pages that use ANY tag</target>
+                <target>Use pages that use ANY category</target>
             </trans-unit>
             <trans-unit id="e4b14069a8a085ede2092hf51234dh46" resname="smart-content.categories.use-all-categories">
                 <source>smart-content.categories.use-all-categories</source>
@@ -533,7 +541,7 @@
             </trans-unit>
             <trans-unit id="e4b14069a8a085ede2092hf51234dh49" resname="smart-content.choose-categories.ok">
                 <source>smart-content.choose-categories.ok</source>
-                <target>Apply Categories</target>
+                <target>Apply categories</target>
             </trans-unit>
             <trans-unit id="9" resname="content.delete-referenced-by-following">
                 <source>content.delete-referenced-by-following</source>
@@ -550,6 +558,166 @@
             <trans-unit id="12" resname="content.delete-do-it">
                 <source>content.delete-do-it</source>
                 <target>Yes, I am sure</target>
+            </trans-unit>
+            <trans-unit id="13" resname="content.webspace.settings.localizations">
+                <source>content.webspace.settings.localizations</source>
+                <target>Available Localizations</target>
+            </trans-unit>
+            <trans-unit id="14" resname="content.webspace.settings.localization">
+                <source>content.webspace.settings.localization</source>
+                <target>Localization</target>
+            </trans-unit>
+            <trans-unit id="15" resname="content.webspace.settings.theme">
+                <source>content.webspace.settings.theme</source>
+                <target>Theme</target>
+            </trans-unit>
+            <trans-unit id="16" resname="content.webspace.settings.urls">
+                <source>content.webspace.settings.urls</source>
+                <target>Configured Domains / URLs</target>
+            </trans-unit>
+            <trans-unit id="17" resname="content.webspace.settings.url">
+                <source>content.webspace.settings.url</source>
+                <target>Domain (URL)</target>
+            </trans-unit>
+            <trans-unit id="18" resname="content.webspace.settings.main">
+                <source>content.webspace.settings.main</source>
+                <target>Main</target>
+            </trans-unit>
+            <trans-unit id="19" resname="content-navigation.webspace.general">
+                <source>content-navigation.webspace.general</source>
+                <target>General</target>
+            </trans-unit>
+            <trans-unit id="20" resname="content-navigation.webspace.analytics">
+                <source>content-navigation.webspace.analytics</source>
+                <target>Analytics</target>
+            </trans-unit>
+            <trans-unit id="21" resname="content-navigation.webspace.urls">
+                <source>content-navigation.webspace.urls</source>
+                <target>Custom URLs</target>
+            </trans-unit>
+            <trans-unit id="22" resname="navigation.webspaces.settings">
+                <source>navigation.webspaces.settings</source>
+                <target>Settings</target>
+            </trans-unit>
+            <trans-unit id="23" resname="content.webspace.settings.redirect">
+                <source>content.webspace.settings.redirect</source>
+                <target>Redirect</target>
+            </trans-unit>
+            <trans-unit id="24" resname="content.changed-warning.title">
+                <source>content.changed-warning.title</source>
+                <target>Warning, content will be overwritten!</target>
+            </trans-unit>
+            <trans-unit id="25" resname="content.changed-warning.description">
+                <source>content.changed-warning.description</source>
+                <target>This page has been edited by another user. When you save the page this data will get lost.</target>
+            </trans-unit>
+            <trans-unit id="26" resname="content.changed-warning.ok-button">
+                <source>content.changed-warning.ok-button</source>
+                <target>Save page</target>
+            </trans-unit>
+            <trans-unit id="27" resname="content.ckeditor.internal-link">
+                <source>content.ckeditor.internal-link</source>
+                <target>Internal Sulu Link</target>
+            </trans-unit>
+            <trans-unit id="28" resname="content.ckeditor.internal-link.edit">
+                <source>content.ckeditor.internal-link.edit</source>
+                <target>Edit Internal Sulu Link</target>
+            </trans-unit>
+            <trans-unit id="29" resname="content.ckeditor.internal-link.alt-title">
+                <source>content.ckeditor.internal-link.alt-title</source>
+                <target>Alternative title</target>
+            </trans-unit>
+            <trans-unit id="30" resname="content.ckeditor.internal-link.href">
+                <source>content.ckeditor.internal-link.href</source>
+                <target>Target page</target>
+            </trans-unit>
+            <trans-unit id="31" resname="content.ckeditor.internal-link.target">
+                <source>content.ckeditor.internal-link.target</source>
+                <target>Target</target>
+            </trans-unit>
+            <trans-unit id="32" resname="content.ckeditor.internal-link.target-blank">
+                <source>content.ckeditor.internal-link.target-blank</source>
+                <target>New window (_blank)</target>
+            </trans-unit>
+            <trans-unit id="33" resname="content.ckeditor.internal-link.target-self">
+                <source>content.ckeditor.internal-link.target-self</source>
+                <target>Same window (_self)</target>
+            </trans-unit>
+            <trans-unit id="34" resname="content.ckeditor.internal-link.remove">
+                <source>content.ckeditor.internal-link.remove</source>
+                <target>Remove Internal Sulu Link</target>
+            </trans-unit>
+            <trans-unit id="35" resname="content.text_editor.error.unpublished">
+                <source>content.text_editor.error.unpublished</source>
+                <target>Page not published</target>
+            </trans-unit>
+            <trans-unit id="36" resname="content.text_editor.error.unpublished-single">
+                <source>content.text_editor.error.unpublished-single</source>
+                <target>One linked page is not published.</target>
+            </trans-unit>
+            <trans-unit id="37" resname="content.text_editor.error.unpublished-multiple">
+                <source>content.text_editor.error.unpublished-multiple</source>
+                <target>%s linked pages are not published.</target>
+            </trans-unit>
+            <trans-unit id="38" resname="content.text_editor.error.removed">
+                <source>content.text_editor.error.removed</source>
+                <target>Link broken</target>
+            </trans-unit>
+            <trans-unit id="39" resname="content.text_editor.error.removed-single">
+                <source>content.text_editor.error.removed-single</source>
+                <target>One link is broken.</target>
+            </trans-unit>
+            <trans-unit id="40" resname="content.text_editor.error.removed-multiple">
+                <source>content.text_editor.error.removed-multiple</source>
+                <target>%s links are broken.</target>
+            </trans-unit>
+            <trans-unit id="41" resname="sulu-content.save-draft">
+                <source>sulu-content.save-draft</source>
+                <target>Save as draft</target>
+            </trans-unit>
+            <trans-unit id="42" resname="sulu-content.save-publish">
+                <source>sulu-content.save-publish</source>
+                <target>Save and publish</target>
+            </trans-unit>
+            <trans-unit id="43" resname="sulu-content.publish">
+                <source>sulu-content.publish</source>
+                <target>Publish</target>
+            </trans-unit>
+            <trans-unit id="44" resname="sulu-content.published-shadow">
+                <source>sulu-content.published-shadow</source>
+                <target>The publishing state will be retrieved from the state of the main page.</target>
+            </trans-unit>
+            <trans-unit id="45" resname="sulu-content.draft-label">
+                <source>sulu-content.draft-label</source>
+                <target><![CDATA[You are working on a draft, last saved: %(changed)s by <b>%(user)s</b>]]></target>
+            </trans-unit>
+            <trans-unit id="46" resname="sulu-content.unpublish">
+                <source>sulu-content.unpublish</source>
+                <target>Unpublish</target>
+            </trans-unit>
+            <trans-unit id="47" resname="labels.error.content-unpublish-desc">
+                <source>labels.error.content-unpublish-desc</source>
+                <target>Page could not be unpublished.</target>
+            </trans-unit>
+            <trans-unit id="48" resname="content-navigation.security.texteditor">
+                <source>content-navigation.security.texteditor</source>
+                <target>Text editor</target>
+            </trans-unit>
+            <trans-unit id="49" resname="sulu-content.ckeditor.roles-title">
+                <source>sulu-content.ckeditor.roles-title</source>
+                <target>Text editor settings</target>
+            </trans-unit>
+            <trans-unit id="50" resname="sulu-content.ckeditor.roles-type">
+                <source>sulu-content.ckeditor.roles-type</source>
+                <target>Section</target>
+            </trans-unit>
+            <trans-unit id="51" resname="sulu-content.ckeditor.roles-horizontal">
+                <source>sulu-content.ckeditor.roles-horizontal</source>
+                <target>Function</target>
+            </trans-unit>
+            <trans-unit id="52" resname="sulu-content.ckeditor.roles-info">
+                <source>sulu-content.ckeditor.roles-info</source>
+                <target>These settings apply for any text editor throughout the system used by this role.</target>
             </trans-unit>
         </body>
     </file>

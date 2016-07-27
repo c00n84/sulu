@@ -11,8 +11,9 @@ define([
     'services/sulumedia/media-manager',
     'services/sulumedia/user-settings-manager',
     'services/sulumedia/media-router',
+    'services/sulumedia/file-icons',
     'config'
-], function(MediaManager, UserSettingsManager, MediaRouter, Config) {
+], function(MediaManager, UserSettingsManager, MediaRouter, FileIcons, Config) {
 
     'use strict';
 
@@ -24,7 +25,12 @@ define([
         defaults = {};
 
     return {
+
+        stickyToolbar: true,
+
         header: {
+            title: 'sulu.media.all',
+
             noBack: true,
             toolbar: {
                 template: 'empty',
@@ -56,7 +62,8 @@ define([
         initialize: function() {
             // extend defaults with options
             this.options = this.sandbox.util.extend(true, {}, defaults, this.options);
-            this.updateDataNavigation();
+            this.sandbox.emit('husky.navigation.select-id', 'collections-edit');
+            this.updateDataNavigationAddButton();
 
             this.bindCustomEvents();
             this.render();
@@ -65,11 +72,8 @@ define([
         /**
          * Set the data-navigation url
          */
-        updateDataNavigation: function() {
-            var url = '/admin/api/collections?sortBy=title',
-                permissions = Config.get('sulu-media').permissions;
-            this.sandbox.emit('husky.data-navigation.collections.set-url', url);
-            this.sandbox.emit('husky.navigation.select-id', 'collections-edit', {dataNavigation: {url: url}});
+        updateDataNavigationAddButton: function() {
+            var permissions = Config.get('sulu-media').permissions;
 
             if (!!permissions.add) {
                 this.sandbox.emit('husky.data-navigation.collections.add-button.show');
@@ -94,6 +98,8 @@ define([
                     this.sandbox.emit('husky.datagrid.view.change', 'table');
                     this.sandbox.emit('husky.datagrid.pagination.change', 'dropdown');
                 }.bind(this));
+
+                this.sandbox.stickyToolbar.reset(this.$el);
             }.bind(this));
 
             // change datagrid view to masonry
@@ -108,6 +114,8 @@ define([
                     this.sandbox.emit('husky.datagrid.view.change', 'datagrid/decorators/masonry-view');
                     this.sandbox.emit('husky.datagrid.pagination.change', 'infinite-scroll');
                 }.bind(this));
+
+                this.sandbox.stickyToolbar.reset(this.$el);
             }.bind(this));
 
             // language change
@@ -123,10 +131,7 @@ define([
         render: function() {
             this.sandbox.dom.html(
                 this.$el,
-                this.renderTemplate(
-                    '/admin/media/template/collection/files',
-                    {title: this.sandbox.translate('sulu.media.all')}
-                )
+                this.renderTemplate('/admin/media/template/collection/files')
             );
             this.startDatagrid();
         },
@@ -157,19 +162,40 @@ define([
                 },
                 {
                     el: this.$find(constants.datagridSelector),
-                    url: '/admin/api/media?orderBy=media.changed&orderSort=desc&locale=' + UserSettingsManager.getMediaLocale(),
+                    url: '/admin/api/media?orderBy=media.created&orderSort=desc&locale=' + UserSettingsManager.getMediaLocale(),
+                    searchFields: ['name', 'title', 'description'],
                     view: UserSettingsManager.getMediaListView(),
                     pagination: UserSettingsManager.getMediaListPagination(),
                     resultKey: 'media',
-                    sortable: false,
                     actionCallback: this.actionCallback.bind(this),
                     viewOptions: {
                         table: {
                             selectItem: true,
-                            actionIconColumn: 'name'
+                            actionIconColumn: 'name',
+                            noImgIcon: function(item) {
+                                return FileIcons.getByMimeType(item.mimeType);
+                            },
+                            badges: [
+                                {
+                                    column: 'title',
+                                    callback: function(item, badge) {
+                                        if (item.locale !== UserSettingsManager.getMediaLocale()) {
+                                            badge.title = item.locale;
+
+                                            return badge;
+                                        }
+                                    }.bind(this)
+                                }
+                            ],
+                            emptyIcon: 'fa-file-o'
                         },
                         'datagrid/decorators/masonry-view': {
-                            selectable: false
+                            selectable: false,
+                            noImgIcon: function(item) {
+                                return FileIcons.getByMimeType(item.mimeType);
+                            },
+                            emptyIcon: 'fa-file-o',
+                            locale: UserSettingsManager.getMediaLocale()
                         }
                     },
                     paginationOptions: {

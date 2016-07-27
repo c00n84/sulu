@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -12,7 +12,7 @@
 namespace Sulu\Bundle\MediaBundle\Controller;
 
 use Sulu\Bundle\MediaBundle\Entity\FileVersion;
-use Sulu\Bundle\MediaBundle\Entity\Media;
+use Sulu\Bundle\MediaBundle\Entity\MediaInterface;
 use Sulu\Bundle\MediaBundle\Media\Exception\FileVersionNotFoundException;
 use Sulu\Bundle\MediaBundle\Media\Exception\ImageProxyException;
 use Sulu\Bundle\MediaBundle\Media\Exception\MediaException;
@@ -150,11 +150,9 @@ class MediaStreamController extends Controller
     protected function getFileVersion($id, $version)
     {
         /*
-         * @var Media
+         * @var MediaInterface
          */
-        $mediaEntity = $this->getDoctrine()
-            ->getRepository('SuluMediaBundle:Media')
-            ->findMediaById($id);
+        $mediaEntity = $this->container->get('sulu.repository.media')->findMediaById($id);
 
         $currentFileVersion = null;
         $version = $version === null ? $mediaEntity->getFiles()[0]->getVersion() : $version;

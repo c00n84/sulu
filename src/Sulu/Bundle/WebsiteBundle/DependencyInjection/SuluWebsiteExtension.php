@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -33,11 +33,6 @@ class SuluWebsiteExtension extends Extension
         $config = $this->processConfiguration($configuration, $configs);
 
         $container->setParameter(
-            'sulu_website.preview_defaults.analytics_key',
-            $config['preview_defaults']['analytics_key']
-        );
-
-        $container->setParameter(
             'sulu_website.navigation.cache.lifetime',
             $config['twig']['navigation']['cache_lifetime']
         );
@@ -53,8 +48,15 @@ class SuluWebsiteExtension extends Extension
         $loader = new Loader\XmlFileLoader($container, new FileLocator(__DIR__ . '/../Resources/config'));
         $loader->load('services.xml');
 
+        if ($config['analytics']['enabled']) {
+            $loader->load('analytics.xml');
+        }
+
         if (SuluKernel::CONTEXT_WEBSITE == $container->getParameter('sulu.context')) {
             $loader->load('website.xml');
+
+            // default local provider
+            $container->setAlias('sulu_website.default_locale.provider', $config['default_locale']['provider_service_id']);
         }
     }
 }

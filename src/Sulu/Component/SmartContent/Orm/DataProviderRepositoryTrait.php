@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -21,17 +22,18 @@ trait DataProviderRepositoryTrait
     /**
      * @see DataProviderRepositoryInterface::findByFilters
      */
-    public function findByFilters($filters, $page, $pageSize, $limit, $locale)
+    public function findByFilters($filters, $page, $pageSize, $limit, $locale, $options = [])
     {
-        $queryBuilder = $this->createQueryBuilder('entity')
-            ->addSelect('entity')
-            ->where('entity.id IN (:ids)')
-            ->orderBy('entity.id', 'ASC');
-
-        $this->appendJoins($queryBuilder);
+        $alias = 'entity';
+        $queryBuilder = $this->createQueryBuilder($alias)
+            ->addSelect($alias)
+            ->where($alias . '.id IN (:ids)')
+            ->orderBy($alias . '.id', 'ASC');
+        $this->appendJoins($queryBuilder, $alias, $locale);
 
         $query = $queryBuilder->getQuery();
-        $query->setParameter('ids', $this->findByFiltersIds($filters, $page, $pageSize, $limit));
+        $ids = $this->findByFiltersIds($filters, $page, $pageSize, $limit, $locale, $options);
+        $query->setParameter('ids', $ids);
 
         return $query->getResult();
     }
@@ -43,10 +45,12 @@ trait DataProviderRepositoryTrait
      * @param int $page
      * @param int $pageSize
      * @param int $limit
+     * @param string $locale
+     * @param array $options
      *
      * @return array
      */
-    private function findByFiltersIds($filters, $page, $pageSize, $limit)
+    private function findByFiltersIds($filters, $page, $pageSize, $limit, $locale, $options = [])
     {
         $parameter = [];
 
@@ -54,12 +58,24 @@ trait DataProviderRepositoryTrait
             ->select('c.id')
             ->orderBy('c.id', 'ASC');
 
+        $tagRelation = $this->appendTagsRelation($queryBuilder, 'c');
+        $categoryRelation = $this->appendCategoriesRelation($queryBuilder, 'c');
+        $parameter = array_merge($parameter, $this->append($queryBuilder, 'c', $locale, $options));
+
+        if (isset($filters['dataSource'])) {
+            $includeSubFolders = $this->getBoolean($filters['includeSubFolders'] ?: false);
+            $parameter = array_merge(
+                $parameter,
+                $this->appendDatasource($filters['dataSource'], $includeSubFolders, $queryBuilder, 'c')
+            );
+        }
+
         if (isset($filters['tags']) && !empty($filters['tags'])) {
             $parameter = array_merge(
                 $parameter,
                 $this->appendRelation(
                     $queryBuilder,
-                    'c.tags',
+                    $tagRelation,
                     $filters['tags'],
                     strtolower($filters['tagOperator']),
                     'adminTags'
@@ -72,7 +88,7 @@ trait DataProviderRepositoryTrait
                 $parameter,
                 $this->appendRelation(
                     $queryBuilder,
-                    'c.categories',
+                    $categoryRelation,
                     $filters['categories'],
                     strtolower($filters['categoryOperator']),
                     'adminCategories'
@@ -85,7 +101,7 @@ trait DataProviderRepositoryTrait
                 $parameter,
                 $this->appendRelation(
                     $queryBuilder,
-                    'c.tags',
+                    $tagRelation,
                     $filters['websiteTags'],
                     strtolower($filters['websiteTagsOperator']),
                     'websiteTags'
@@ -98,7 +114,7 @@ trait DataProviderRepositoryTrait
                 $parameter,
                 $this->appendRelation(
                     $queryBuilder,
-                    'c.categories',
+                    $categoryRelation,
                     $filters['websiteCategories'],
                     strtolower($filters['websiteCategoriesOperator']),
                     'websiteCategories'
@@ -138,6 +154,22 @@ trait DataProviderRepositoryTrait
     }
 
     /**
+     * Returns boolean for string.
+     *
+     * @param string|bool $value
+     *
+     * @return bool
+     */
+    private function getBoolean($value)
+    {
+        if ($value === true || $value === 'true') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
      * Append tags to query builder with given operator.
      *
      * @param QueryBuilder $queryBuilder
@@ -146,7 +178,7 @@ trait DataProviderRepositoryTrait
      * @param string $operator "and" or "or"
      * @param string $alias
      *
-     * @return array parameter for the query.
+     * @return array parameter for the query
      */
     private function appendRelation(QueryBuilder $queryBuilder, $relation, $values, $operator, $alias)
     {
@@ -170,11 +202,11 @@ trait DataProviderRepositoryTrait
      * @param int[] $values
      * @param string $alias
      *
-     * @return array parameter for the query.
+     * @return array parameter for the query
      */
     private function appendRelationOr(QueryBuilder $queryBuilder, $relation, $values, $alias)
     {
-        $queryBuilder->join($relation, $alias)
+        $queryBuilder->leftJoin($relation, $alias)
             ->andWhere($alias . '.id IN (:' . $alias . ')');
 
         return [$alias => $values];
@@ -188,7 +220,7 @@ trait DataProviderRepositoryTrait
      * @param int[] $values
      * @param string $alias
      *
-     * @return array parameter for the query.
+     * @return array parameter for the query
      */
     private function appendRelationAnd(QueryBuilder $queryBuilder, $relation, $values, $alias)
     {
@@ -197,7 +229,7 @@ trait DataProviderRepositoryTrait
 
         $length = count($values);
         for ($i = 0; $i < $length; ++$i) {
-            $queryBuilder->join($relation, $alias . $i);
+            $queryBuilder->leftJoin($relation, $alias . $i);
 
             $expr->add($queryBuilder->expr()->eq($alias . $i . '.id', ':' . $alias . $i));
 
@@ -222,6 +254,65 @@ trait DataProviderRepositoryTrait
      * Append joins to query builder for "findByFilters" function.
      *
      * @param QueryBuilder $queryBuilder
+     * @param string $alias
+     * @param string $locale
      */
-    abstract protected function appendJoins(QueryBuilder $queryBuilder);
+    abstract protected function appendJoins(QueryBuilder $queryBuilder, $alias, $locale);
+
+    /**
+     * Append additional condition to query builder for "findByFilters" function.
+     *
+     * @param QueryBuilder $queryBuilder
+     * @param string $locale
+     * @param array $options
+     *
+     * @return array parameters for query
+     */
+    protected function append(QueryBuilder $queryBuilder, $alias, $locale, $options = [])
+    {
+        // empty implementation can be overwritten by repository
+        return [];
+    }
+
+    /**
+     * Extension point to append relations to tag relation if it is not direct linked.
+     *
+     * @param QueryBuilder $queryBuilder
+     * @param string $alias
+     *
+     * @return string field path to tag relation
+     */
+    protected function appendTagsRelation(QueryBuilder $queryBuilder, $alias)
+    {
+        return $alias . '.tags';
+    }
+
+    /**
+     * Extension point to append relations to category relation if it is not direct linked.
+     *
+     * @param QueryBuilder $queryBuilder
+     * @param string $alias
+     *
+     * @return string field path to category relation
+     */
+    protected function appendCategoriesRelation(QueryBuilder $queryBuilder, $alias)
+    {
+        return $alias . '.categories';
+    }
+
+    /**
+     * Extension point to append datasource.
+     *
+     * @param mixed $datasource
+     * @param bool $includeSubFolders
+     * @param QueryBuilder $queryBuilder
+     * @param string $alias
+     *
+     * @return array parameters for query
+     */
+    protected function appendDatasource($datasource, $includeSubFolders, QueryBuilder $queryBuilder, $alias)
+    {
+        // empty implementation can be overwritten by repository
+        return [];
+    }
 }

@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -20,7 +20,6 @@ use Sulu\Component\Content\Compat\StructureInterface;
 use Sulu\Component\Content\Document\Behavior\SecurityBehavior;
 use Sulu\Component\Content\Exception\InvalidOrderPositionException;
 use Sulu\Component\Content\Mapper\ContentMapperInterface;
-use Sulu\Component\Content\Mapper\ContentMapperRequest;
 use Sulu\Component\Content\Query\ContentQueryBuilderInterface;
 use Sulu\Component\Content\Query\ContentQueryExecutorInterface;
 use Sulu\Component\DocumentManager\Exception\DocumentManagerException;
@@ -34,6 +33,8 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 
 /**
  * repository for node objects.
+ *
+ * @deprecated
  */
 class NodeRepository implements NodeRepositoryInterface
 {
@@ -210,9 +211,7 @@ class NodeRepository implements NodeRepositoryInterface
         $complete = true,
         $loadGhostContent = false
     ) {
-        if ($webspaceKey) {
-            $structure = $this->getMapper()->load($uuid, $webspaceKey, $languageCode, $loadGhostContent);
-        }
+        $structure = $this->getMapper()->load($uuid, $webspaceKey, $languageCode, $loadGhostContent);
 
         $result = $this->prepareNode($structure, $webspaceKey, $languageCode, 1, $complete);
         if ($breadcrumb) {
@@ -510,14 +509,14 @@ class NodeRepository implements NodeRepositoryInterface
     ) {
         ++$currentDepth;
 
-        if ($maxDepth !== null && $currentDepth > $maxDepth) {
-            return [];
-        }
-
         $results = [];
         foreach ($nodes as $node) {
             $result = $this->prepareNode($node, $webspaceKey, $languageCode, 1, $complete, $excludeGhosts);
-            if ($node->getHasChildren() && $node->getChildren() != null) {
+            if ($maxDepth !== null &&
+                $currentDepth < $maxDepth &&
+                $node->getHasChildren() &&
+                $node->getChildren() != null
+            ) {
                 $result['_embedded']['nodes'] = $this->prepareNodesTree(
                     $node->getChildren(),
                     $webspaceKey,
@@ -532,45 +531,6 @@ class NodeRepository implements NodeRepositoryInterface
         }
 
         return $results;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function saveNode(
-        $data,
-        $templateKey,
-        $webspaceKey,
-        $languageCode,
-        $userId,
-        $uuid = null,
-        $parentUuid = null,
-        $state = null,
-        $isShadow = false,
-        $shadowBaseLanguage = null
-    ) {
-        $node = $this->getMapper()->save(
-            $data,
-            $templateKey,
-            $webspaceKey,
-            $languageCode,
-            $userId,
-            true,
-            $uuid,
-            $parentUuid,
-            $state,
-            $isShadow,
-            $shadowBaseLanguage
-        );
-
-        return $this->prepareNode($node, $webspaceKey, $languageCode);
-    }
-
-    public function saveNodeRequest(ContentMapperRequest $mapperRequest)
-    {
-        $node = $this->getMapper()->saveRequest($mapperRequest);
-
-        return $this->prepareNode($node, $mapperRequest->getWebspaceKey(), $mapperRequest->getLocale());
     }
 
     /**
@@ -791,55 +751,6 @@ class NodeRepository implements NodeRepositoryInterface
         ];
 
         return $data;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function moveNode($uuid, $destinationUuid, $webspaceKey, $languageCode, $userId)
-    {
-        try {
-            // call mapper function
-            $structure = $this->getMapper()->move($uuid, $destinationUuid, $userId, $webspaceKey, $languageCode);
-        } catch (\Exception $ex) {
-            throw new RestException($ex->getMessage(), 1, $ex);
-        }
-
-        return $this->prepareNode($structure, $webspaceKey, $languageCode);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function copyNode($uuid, $destinationUuid, $webspaceKey, $languageCode, $userId)
-    {
-        try {
-            // call mapper function
-            $structure = $this->getMapper()->copy($uuid, $destinationUuid, $userId, $webspaceKey, $languageCode);
-        } catch (DocumentManagerException $ex) {
-            throw new RestException($ex->getMessage(), 1, $ex);
-        } catch (RepositoryException $ex) {
-            throw new RestException($ex->getMessage(), 1, $ex);
-        }
-
-        return $this->prepareNode($structure, $webspaceKey, $languageCode);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function orderBefore($uuid, $beforeUuid, $webspaceKey, $languageCode, $userId)
-    {
-        try {
-            // call mapper function
-            $structure = $this->getMapper()->orderBefore($uuid, $beforeUuid, $userId, $webspaceKey, $languageCode);
-        } catch (DocumentManagerException $ex) {
-            throw new RestException($ex->getMessage(), 1, $ex);
-        } catch (RepositoryException $ex) {
-            throw new RestException($ex->getMessage(), 1, $ex);
-        }
-
-        return $this->prepareNode($structure, $webspaceKey, $languageCode);
     }
 
     /**

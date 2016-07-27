@@ -8,5 +8,7 @@
      data-aura-instance-name="{{ id|raw }}"
      data-aura-url="/admin/api/nodes?language={{ languageCode }}{% if webspaceKey != '' %}&webspace={{ webspaceKey }}{% endif %}&flat=true"
      data-aura-result-key="nodes"
-     data-aura-column-navigation-url="/admin/api/nodes?tree=true{% if webspaceKey != '' %}&webspace={{ webspaceKey }}{% endif %}&language={{ languageCode }}&webspace-node=true">
+     data-aura-navigate-event="sulu.content.navigate"
+     data-aura-webspace="{{ webspaceKey }}"
+     data-aura-locale="{{ languageCode }}">
 </div>

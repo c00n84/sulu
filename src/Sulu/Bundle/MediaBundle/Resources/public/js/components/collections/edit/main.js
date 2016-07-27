@@ -20,16 +20,28 @@ define([
     var defaults = {};
 
     return {
+
         header: function() {
-            var buttons = {};
+            var buttons = {
+                edit: {
+                    options: {
+                        title: 'sulu.header.edit-collection',
+                        dropdownItems: {}
+                    }
+                }
+            };
 
             if (SecurityChecker.hasPermission(this.data, 'edit') && !this.data.locked) {
-                buttons.editCollection = {};
+                buttons.edit.options.dropdownItems.editCollection = {};
                 buttons.moveCollection = {};
             }
 
             if (SecurityChecker.hasPermission(this.data, 'delete') && !this.data.locked) {
-                buttons.deleteCollection = {};
+                buttons.edit.options.dropdownItems.deleteCollection = {};
+            }
+
+            if (this.sandbox.util.isEmpty(buttons.edit.options.dropdownItems)) {
+                delete buttons.edit;
             }
 
             if (SecurityChecker.hasPermission(this.data, 'security') && !this.data.locked) {
@@ -37,9 +49,14 @@ define([
             }
 
             return {
+                title: this.data.title,
+
                 noBack: true,
                 tabs: {
-                    url: '/admin/content-navigations?alias=media'
+                    url: '/admin/content-navigations?alias=media',
+                    componentOptions: {
+                        values: this.data
+                    }
                 },
                 toolbar: {
                     buttons: buttons,
@@ -69,22 +86,17 @@ define([
             this.options = this.sandbox.util.extend(true, {}, defaults, this.options);
 
             UserSettingsManager.setLastVisitedCollection(this.data.id);
-            this.updateDataNavigation();
+
+            this.sandbox.emit('husky.navigation.select-id', 'collections-edit', {
+                dataNavigation: {
+                    url: '/admin/api/collections/' + this.data.id + '?depth=1&sortBy=title'
+                }
+            });
+            this.updateDataNavigationAddButton();
 
             this.bindCustomEvents();
             this.bindOverlayEvents();
             this.bindManagerEvents();
-        },
-
-        /**
-         * Set the data-navigation url accourding to the current collection
-         */
-        updateDataNavigation: function() {
-            var url = '/admin/api/collections/' + this.data.id + '?depth=1&sortBy=title';
-            this.sandbox.emit('husky.data-navigation.collections.set-url', url);
-            this.sandbox.emit('husky.navigation.select-id', 'collections-edit', {dataNavigation: {url: url}});
-
-            this.updateDataNavigationAddButton();
         },
 
         /**
@@ -157,13 +169,14 @@ define([
             this.sandbox.on('sulu.medias.collection.saved', function(id, collection) {
                 if (!collection.locale || collection.locale === UserSettingsManager.getMediaLocale()) {
                     this.data = collection;
-                    this.sandbox.emit('sulu.header.set-title', this.data.title);
-                    this.sandbox.emit('husky.data-navigation.collections.reload');
+                    this.sandbox.emit('sulu.header.saved', this.data);
                 }
             }.bind(this));
 
             this.sandbox.on('sulu.medias.collection.deleted', function() {
                 var parentId = (!!this.data._embedded.parent) ? this.data._embedded.parent.id : null;
+                this.sandbox.emit('husky.data-navigation.collections.reload');
+                this.sandbox.emit('husky.data-navigation.collections.select', parentId);
                 MediaRouter.toCollection(parentId);
             }.bind(this));
         },
@@ -176,7 +189,7 @@ define([
                 if (!!confirmed) {
                     CollectionManager.delete(this.data.id);
                 }
-            }.bind(this));
+            }.bind(this), 'sulu.header.delete-collection');
         },
 
         /**
@@ -185,6 +198,8 @@ define([
          */
         moveCollection: function(parentCollection) {
             CollectionManager.move(this.data.id, parentCollection.id).then(function() {
+                this.sandbox.emit('husky.data-navigation.collections.reload');
+                this.sandbox.emit('husky.data-navigation.collections.select', parentCollection.id);
                 MediaRouter.toCollection(this.data.id);
             }.bind(this));
         }

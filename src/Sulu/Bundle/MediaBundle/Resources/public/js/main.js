@@ -20,6 +20,7 @@ require.config({
         'services/sulumedia/collection-manager': '../../sulumedia/js/services/collection-manager',
         'services/sulumedia/media-manager': '../../sulumedia/js/services/media-manager',
         'services/sulumedia/user-settings-manager': '../../sulumedia/js/services/user-settings-manager',
+        'services/sulumedia/file-icons': '../../sulumedia/js/services/file-icons',
 
         'type/media-selection': '../../sulumedia/js/validation/types/media-selection',
         'datagrid/decorators/masonry-view': '../../sulumedia/js/components/collections/masonry-decorator/masonry-view'
@@ -31,8 +32,9 @@ define([
     'services/sulumedia/overlay-manager',
     'extensions/masonry',
     'extensions/sulu-buttons-mediabundle',
+    'sulumedia/ckeditor/media-link',
     'css!sulumediacss/main'
-], function(MediaRouter, OverlayManager, MasonryExtension, MediaButtons) {
+], function(MediaRouter, OverlayManager, MasonryExtension, MediaButtons, MediaLinkPlugin) {
 
     'use strict';
 
@@ -79,12 +81,19 @@ define([
                 }
             });
 
+            // ckeditor
+            sandbox.ckeditor.addPlugin(
+                'mediaLink',
+                new MediaLinkPlugin(app.sandboxes.create('plugin-media-link'))
+            );
+            sandbox.ckeditor.addToolbarButton('links', 'MediaLink', 'image');
+
             app.components.before('initialize', function() {
                 if (this.name !== 'Sulu App') {
                     return;
                     }
 
-                this.sandbox.on('husky.data-navigation.collections.select', function(item) {
+                this.sandbox.on('husky.data-navigation.collections.selected', function(item) {
                     if (item === null) {
                         MediaRouter.toRoot();
                     }
@@ -96,13 +105,23 @@ define([
 
                 this.sandbox.on('sulu.media.collection-create.created', function(collection) {
                     MediaRouter.toCollection(collection.id);
+
+                    this.sandbox.emit('husky.data-navigation.collections.reload', function() {
+                        this.sandbox.emit('husky.data-navigation.collections.select', collection.id);
+                    });
                 }.bind(this));
 
-                this.sandbox.on('husky.dropzone.error', function() {
-                    var title = this.sandbox.translate('sulu.dropzone.error.title');
+                this.sandbox.on('husky.dropzone.error', function(xhr, file) {
+                    var title = this.sandbox.translate('sulu.dropzone.error.title'),
+                        message = 'sulu.dropzone.error.message';
+
                     title = title.replace('{{filename}}', this.sandbox.util.cropMiddle(file.name, 20));
 
-                    this.sandbox.emit('sulu.labels.error.show', 'sulu.dropzone.error.message', title);
+                    if(xhr.code === 5007){
+                        message ='sulu.dropzone.error.message.wrong-filetype';
+                    }
+
+                    this.sandbox.emit('sulu.labels.error.show', message, title);
                 }.bind(this));
 
                 this.sandbox.on('husky.dropzone.error.file-to-big', function(message, file) {

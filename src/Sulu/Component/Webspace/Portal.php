@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -54,6 +54,13 @@ class Portal
      * @var Localization
      */
     private $defaultLocalization;
+
+    /**
+     * The x-default localization for this portal.
+     *
+     * @var Localization
+     */
+    private $xDefaultLocalization;
 
     /**
      * @var Environment[]
@@ -129,6 +136,10 @@ class Portal
         if ($localization->isDefault()) {
             $this->setDefaultLocalization($localization);
         }
+
+        if ($localization->isXDefault()) {
+            $this->setXDefaultLocalization($localization);
+        }
     }
 
     /**
@@ -168,6 +179,10 @@ class Portal
     public function setDefaultLocalization($defaultLocalization)
     {
         $this->defaultLocalization = $defaultLocalization;
+
+        if (!$this->getXDefaultLocalization()) {
+            $this->setXDefaultLocalization($defaultLocalization);
+        }
     }
 
     /**
@@ -176,6 +191,22 @@ class Portal
     public function getDefaultLocalization()
     {
         return $this->defaultLocalization;
+    }
+
+    /**
+     * @param Localization $xDefaultLocalization
+     */
+    public function setXDefaultLocalization($xDefaultLocalization)
+    {
+        $this->xDefaultLocalization = $xDefaultLocalization;
+    }
+
+    /**
+     * @return Localization
+     */
+    public function getXDefaultLocalization()
+    {
+        return $this->xDefaultLocalization;
     }
 
     /**

@@ -101,7 +101,7 @@ define([
          * @returns {Boolean} true iff a title has been found
          */
         setCollapsedTitle = function($field, $block) {
-            if ($field.is(':visible') && $field.is('input') && !!$field.data('element')) {
+            if ($field.is(':visible') && $field.is('input[type="text"]') && !!$field.data('element')) {
                 if (!!$field.data('element').getValue()) {
                     $block.find('.collapsed-container .title').html($field.data('element').getValue());
                     return true;
@@ -117,7 +117,7 @@ define([
          * for incoming data for the media-selection. The found image gets set as the image in the collapsed element.
          * @param $field {Object} the dom-object of the field
          * @param $block {Object} the dom-object of the block
-         * @returns {Boolean} true iff a a image has been found immediatelly
+         * @returns {Boolean} true if a a image has been found immediately
          */
         setCollapsedImage = function($field, $block) {
             if (!!$field.data('type') && $field.data('type') === 'media-selection') {
@@ -153,13 +153,19 @@ define([
          * @returns {Boolean} true iff a title has been found
          */
         setCollapsedText = function($field, $block) {
+            var type, text;
+
             if (!!$field.data('element')) {
-                if (!!$field.data('element').getType && $field.data('element').getType().name === 'textEditor') {
-                    if (!!$($field.data('element').getValue()).text()) {
-                        $block.find('.collapsed-container .text').html($($field.data('element').getValue()).text());
+                type = !!$field.data('element').getType ? $field.data('element').getType() : null;
+                if (!!type && type.name === 'textEditor') {
+                    text = $('<div/>').append($field.data('element').getValue()).text();
+
+                    if (!!text) {
+                        $block.find('.collapsed-container .text').html(text);
                         return true;
                     }
                 }
+
                 if ($field.is('textarea')) {
                     if (!!$field.data('element').getValue()) {
                         $block.find('.collapsed-container .text').html($field.data('element').getValue());
@@ -227,7 +233,6 @@ define([
 
                     this.bindDomEvents();
                     this.setSortable();
-                    this.setValue([]);
 
                     $('#collapse-text-blocks-' + this.id).addClass('hidden');
                     $('#expand-text-blocks-' + this.id).addClass('hidden');
@@ -298,19 +303,20 @@ define([
                     $('#expand-text-blocks-' + this.id).on('click', this.expandAll.bind(this));
                 },
 
+
                 removeBlockHandler: function(event) {
-                    Husky.sulu.showDeleteDialog(function(confirmed) {
+                    Husky.sulu.showDeleteDialog(
+                        function(confirmed) {
                             if (confirmed) {
                                 var $removeButton = $(event.target),
                                     $element = $removeButton.closest('.' + this.propertyName + '-element');
 
                                 if (this.canRemove()) {
-                                    this.form.removeFields($element);
                                     $element.remove();
-
-                                    $(form.$el).trigger('form-remove', [this.propertyName]);
                                     this.checkFullAndEmpty();
                                 }
+
+                                $(form.$el).trigger('form-remove', [this.propertyName]);
                             }
                         }.bind(this)
                     );
@@ -359,7 +365,7 @@ define([
 
                 //TODO: make cleaner
                 addChild: function(type, data, fireEvent, index, keepExpanded) {
-                    var options, template, $template,
+                    var options, template, $template, newSubForm,
                         dfd = Husky.data.deferred();
 
                     if (typeof index === 'undefined' || index === null) {
@@ -385,10 +391,10 @@ define([
                         Husky.dom.insertAt(index, '> *', this.$el, $template);
 
                         if (this.types.length > 1) {
-                            initializeTypeSelect.call(this, $template, options, function(item) {
-                                var data = form.mapper.getData($template);
+                            initializeTypeSelect.call(this, $template, options, function(type) {
+                                var data = Husky.form.getObject($template).mapper.getData();
                                 Husky.stop($template.find('*'));
-                                this.addChild(item, data, true, $template.index(), true);
+                                this.addChild(type, data, true, $template.index(), true);
                             }.bind(this));
                         }
 
@@ -397,8 +403,9 @@ define([
                             Husky.dom.remove(Husky.dom.find('.options-remove', $template));
                         }
 
-                        form.initFields($template).then(function() {
-                            form.mapper.setData(data, $template).then(function() {
+                        newSubForm = Husky.form.create($template);
+                        newSubForm.initialized.then(function() {
+                            newSubForm.mapper.setData(data, $template).then(function() {
                                 if (!keepExpanded) {
                                     collapseBlock.call(this, $template);
                                 } else {
@@ -479,9 +486,10 @@ define([
 
                 getValue: function() {
                     var data = [];
-                    Husky.dom.children(this.$el).each(function() {
-                        data.push(form.mapper.getData($(this)));
+                    Husky.dom.children(this.$el).filter(':not(script)').each(function(index, $element) {
+                        data.push(Husky.form.getObject($element).mapper.getData());
                     });
+
                     return data;
                 },
 

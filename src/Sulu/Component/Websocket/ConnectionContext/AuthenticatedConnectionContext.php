@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -43,6 +43,6 @@ class AuthenticatedConnectionContext extends ConnectionContext implements Authen
      */
     public function isValid()
     {
-        return ($this->getUser($this->firewall) !== null);
+        return $this->getUser($this->firewall) !== null;
     }
 }

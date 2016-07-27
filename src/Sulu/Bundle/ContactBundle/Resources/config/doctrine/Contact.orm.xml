@@ -5,6 +5,10 @@
 
     <mapped-superclass name="Sulu\Bundle\ContactBundle\Entity\Contact" table="co_contacts"
             repository-class="Sulu\Bundle\ContactBundle\Entity\ContactRepository">
+        <indexes>
+            <index columns="firstName"/>
+            <index columns="lastName"/>
+        </indexes>
 
         <id name="id" type="integer" column="id">
             <generator strategy="AUTO"/>
@@ -17,7 +21,6 @@
 
         <field name="salutation" type="string" column="salutation" length="255" nullable="true"/>
         <field name="formOfAddress" type="integer" column="formOfAddress" nullable="true"/>
-        <field name="disabled" type="boolean" column="disabled" nullable="true"/>
         <field name="newsletter" type="boolean" column="newsletter" nullable="true"/>
         <field name="gender" type="string" column="gender" length="1" nullable="true"/>
 
@@ -30,11 +33,13 @@
 
         <one-to-many field="locales" target-entity="Sulu\Bundle\ContactBundle\Entity\ContactLocale" mapped-by="contact"/>
 
-        <one-to-many field="contactAddresses" target-entity="Sulu\Bundle\ContactBundle\Entity\ContactAddress" mapped-by="contact"/>
+        <one-to-many field="contactAddresses" target-entity="Sulu\Bundle\ContactBundle\Entity\ContactAddress" mapped-by="contact">
+            <cascade><cascade-persist/></cascade>
+        </one-to-many>
 
         <one-to-many field="accountContacts" target-entity="Sulu\Bundle\ContactBundle\Entity\AccountContact" mapped-by="contact"/>
 
-        <many-to-one field="avatar" target-entity="Sulu\Bundle\MediaBundle\Entity\Media">
+        <many-to-one field="avatar" target-entity="Sulu\Bundle\MediaBundle\Entity\MediaInterface">
             <join-columns>
                 <join-column name="avatar" referenced-column-name="id" nullable="true" on-delete="SET NULL"/>
             </join-columns>
@@ -46,7 +51,7 @@
             </join-columns>
         </many-to-one>
 
-        <many-to-many field="medias" target-entity="Sulu\Bundle\MediaBundle\Entity\Media">
+        <many-to-many field="medias" target-entity="Sulu\Bundle\MediaBundle\Entity\MediaInterface">
             <join-table name="co_contact_medias">
                 <join-columns>
                     <join-column name="idContacts" referenced-column-name="id" on-delete="CASCADE" nullable="false"/>
@@ -75,6 +80,9 @@
         </many-to-many>
 
         <many-to-many field="urls" target-entity="Sulu\Bundle\ContactBundle\Entity\Url" inversed-by="contacts">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
             <join-table name="co_contact_urls">
                 <join-columns>
                     <join-column name="idContacts" referenced-column-name="id"/>
@@ -88,6 +96,9 @@
             </order-by>
         </many-to-many>
         <many-to-many field="notes" target-entity="Sulu\Bundle\ContactBundle\Entity\Note" inversed-by="contacts">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
             <join-table name="co_contact_notes">
                 <join-columns>
                     <join-column name="idContacts" referenced-column-name="id"/>
@@ -101,6 +112,9 @@
             </order-by>
         </many-to-many>
         <many-to-many field="emails" target-entity="Sulu\Bundle\ContactBundle\Entity\Email" inversed-by="contacts">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
             <join-table name="co_contact_emails">
                 <join-columns>
                     <join-column name="idContacts" referenced-column-name="id"/>
@@ -114,6 +128,9 @@
             </order-by>
         </many-to-many>
         <many-to-many field="phones" target-entity="Sulu\Bundle\ContactBundle\Entity\Phone" inversed-by="contacts">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
             <join-table name="co_contact_phones">
                 <join-columns>
                     <join-column name="idContacts" referenced-column-name="id"/>
@@ -127,6 +144,9 @@
             </order-by>
         </many-to-many>
         <many-to-many field="faxes" target-entity="Sulu\Bundle\ContactBundle\Entity\Fax" inversed-by="contacts">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
             <join-table name="co_contact_faxes">
                 <join-columns>
                     <join-column name="idContacts" referenced-column-name="id"/>
@@ -153,6 +173,9 @@
             </order-by>
         </many-to-many>
         <many-to-many field="bankAccounts" target-entity="Sulu\Bundle\ContactBundle\Entity\BankAccount" inversed-by="contacts">
+            <cascade>
+                <cascade-persist/>
+            </cascade>
             <join-table name="co_contact_bank_accounts">
                 <join-columns>
                     <join-column name="idContacts" referenced-column-name="id"/>

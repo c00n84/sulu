@@ -2,6 +2,545 @@
 
 ## dev-develop
 
+### SearchController
+
+The `SearchController` has been moved from sulu-standard to sulu. Therefore the
+new template type `search` has been introduced. Just define the twig template
+you want to use for the search in your webspace configuration:
+
+```xml
+<templates>
+    <template type="search">ClientWebsiteBundle:views:query.html.twig</template>
+</templates>
+```
+
+The name of the route also changed from `website_search` to
+`sulu_search.website_search`, because the controller is located in the
+SuluSearchBundle now.
+
+### Webspace Configuration
+
+The configuration schema for webspaces has changed. Instead of
+`error-templates` you have to define `templates` now with a certain type.
+For the error templates this type is `error` for the default error, and
+`error-<code>` for certain error codes.
+
+Before:
+```xml
+<error-templates>
+    <error-template code="404">SomeBundle:view:error404.html.twig</error-template>
+    <error-template default="true">SomeBundle:view:error.html.twig</error-template>
+</error-templates>
+```
+
+After:
+```xml
+<templates>
+    <template type="error-404">SomeBundle:views:error404.html.twig</template>
+    <template type="error">SomeBundle:views:error.html.twig</template>
+</templates>
+```
+
+This change only affects the files which use the 1.1 version of the webspace
+schema definition.
+
+## 1.3.0-RC1
+
+### Image Formats
+The image format "150x100" as well as the format "200x200" got removed
+from the backend formats. If a website relied on this format,
+it should be - as all image formats a website needs - defined
+in the theme specific config file.
+(http://docs.sulu.io/en/latest/book/creating-a-basic-website/adding-a-theme.html#configure-image-formats)
+
+### PHPCR
+To adapt to the new PHPCR structure execute the migrations:
+
+```
+app/console phpcr:migrations:migrate
+```
+
+### Media selection overlay
+The frontend component 'media-selection-overlay@sulumedia' got removed,
+please use 'media-selection/overlay@sulumedia' instead.
+
+### NodeRepository
+
+The `orderBefore` method of the `NodeRepository` has been removed. Use the
+`reorder` method of the `DocumentManager` instead.
+
+### LocalizationProvider
+The core LocalizationProvider (which provided the system locales)
+got removed. At this point the WebspaceLocalizationProvider is the
+only LocalizationProvider in Sulu. If the system locales 
+(locales in which translations for the admin panel are available) are
+needed, please refer directly to the config `sulu_core.translations`.
+
+### Translations
+The command `sulu:translate:import` got removed, as the export command
+(`sulu:translate:export`) now takes its translations directly from
+the translation files and not from the database anymore. This change
+would only cause conflicts, if one had a dependency directly on the
+translations in the database. If so, please use the files in the
+`Resources` folders.
+
+### Publishing
+
+For the publishing a separate workspace was introduced. This workspace
+will be created and correctly filled by the PHPCR migrations.
+
+Because the search index is now split into draft and live pages you have
+to reindex all the content:
+
+```bash
+app/console massive:search:purge --all
+app/console massive:search:reindex
+app/webconsole massive:search:reindex
+```
+
+Also the `persist` call of the `DocumentManager` changed it behavior.
+After persisting a document it will not be available on the website
+immediately. Instead you also need to call `publish` with the same
+document and locale.
+
+### PHPCR Sessions
+
+The sessions for PHPCR were configured at `sulu_core.phpcr` in the
+configuration. This happens now at `sulu_document_manager.sessions`. You can
+define multiple sessions here using different names and refer to one of them as
+default session using the `sulu_document_manager.default_session` and to
+another as live session using the `sulu_document_manager.live_session`.
+
+### Documemt Manager Initializer
+
+The `initialize` method of the `InitializerInterface` has now also a `$purge`
+parameter, which tells the initializer if it should purge something. The
+Initializer can use this information or simply ignore it, but existing
+Initializers have to adapt to the new interface.
+
+### Twig variable `request.routeParameters` removed
+
+The `request.routeParameters` variable has been removed because it is not longer required when generate an url.
+
+**Before**
+
+```twig
+{{ path('client_website.search', request.routeParameters) }}
+```
+
+**After**
+
+```twig
+{{ path('client_website.search') }}
+```
+
+### TitleBehavior is not localized anymore
+
+If you have implemented your own Documents with an `TitleBehavior`,
+you will recognize that the title in PHPCR is not translated anymore.
+If you still want this Behavior you have to switch to the
+`LocalizedTitleBehavior`.
+
+### Indexing title of pages for search
+
+It was possible to define that the title field of a page should be
+indexed as title, although this value was already the default:
+
+```
+<property name="title" type="text_line" mandatory="true">
+    <meta>
+        <title lang="en">Title</title>
+    </meta>
+    <tag name="sulu.search.field" type="string" role="title" />
+</property>
+ ```
+
+ This setting does not work anymore, because the title is now handled
+ separately from the rest of the structure, and the title is not indexed
+ anymore with this tag. Just remove it, and it will be the same as
+ before.
+
+### Webspaces
+
+We have deprecated (1.0) the schema for webspaces and created a new version (1.1) of it. 
+
+```
+<?xml version="1.0" encoding="utf-8"?>
+<webspace xmlns="http://schemas.sulu.io/webspace/webspace"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://schemas.sulu.io/webspace/webspace http://schemas.sulu.io/webspace/webspace-1.1.xsd">
+          
+          ...
+          
+</webspace>
+```
+
+You should update your webspace.xml files soonish. To do that you simply have to move the `default-templates` and
+`error-templates` from the `theme` node and put it into the `webspace` node after the `theme`.
+ 
+The theme is now optional and can be used with a theme-bundle. Sulu has extracted this functionality to make it
+replaceable with any theming bundle you want. To keep the old directory-structure and functionality please read the
+next part of this file.
+
+### Theming
+
+If you have multiple themes (or you don't want to change the folder structure of you project) you have to include the
+bundle https://github.com/sulu/SuluThemeBundle in your abstract kernel.
+
+This bundle contains all the code which is necessary to use theming in your application.
+
+### Configuration
+
+The configuration of `sulu_content.preview` and `sulu_website.preview_defaults` has been moved to:
+
+```
+$ app/console config:dump-reference sulu_preview
+# Default configuration for extension with alias: "sulu_preview"
+sulu_preview:
+    defaults:
+        analytics_key:        UA-SULU-PREVIEW-KEY
+    error_template:       ~ # Example: ClientWebsiteBundle:Preview:error.html.twig
+    mode:                 auto
+
+    # Used for the delayed send of changes
+    delay:                500
+```
+
+The flag `sulu_content.preview.websocket` has been replaced with `sulu_websocket.enabled`. This flag is
+now default `false`.
+
+### Content-Types
+
+The Interface or content-types has been cleaned. The function `ContentTypeInterface::readForPreview` will never
+be called in the future and can therefor be removed.
+
+## 1.2.7
+
+### Default Country
+
+The default country for addresses in the ContactBundle is set by the ISO 3166 country-code
+instead the of database-id now.
+
+## 1.2.4
+
+### ContactRepository
+
+A Interface for the ContactRepository has been created. Due to the refactoring
+the function `appendJoins` has been changed from public to protected.
+Therefore this function cannot be called anymore.
+
+## 1.2.1
+
+### UserRepository
+
+The methods from the `UserProviderInterface` of Symfony have been moved to a
+separate `UserProvider` implementation. Also, the `getUserInSystem` method
+has been renamed to `findUserBySystem` and takes the system as an argument.
+
+If you want to use the `Sulu` system you should inject the
+`sulu_security.system` container parameter instead of hardcoding it.
+
+## 1.2.0
+
+### sulu_content_path
+src/Sulu/Bundle/WebsiteBundle/Resources/config/services.xml
+The twig function `sulu_content_path('/path')` now always returning the full-qualified-domain
+`http://www.sulu.io/de/path`.
+
+### Custom-Routes
+
+The naming of the custom-routes with `type: portal` has changed. You can use now the configured name 
+and pass the host and prefix in the parameter. The current parameter will be populated in the variable
+`request.routeParameters`.
+
+__before:__
+```
+{{ path(request.portalUrl ~'.'~ request.locale ~ '.website_search') }}
+```
+
+__after:__
+```
+{{ path('website_search', request.routeParameters) }}
+```
+
+### Admin
+
+The navigation entry with the empty name wont be used in sulu anymore. It should be replaced by:
+
+__before:__
+
+```php
+    $section = new NavigationItem('');
+```
+
+__after:__
+
+```php
+    $section = new NavigationItem('navigation.modules');
+```
+
+### Twig function `sulu_resolve_user`
+
+This twig function returns now the user. To get the related contact use following code snippet:
+
+```twig
+{{ sulu_resolve_user(userId).contact.fullName }}
+```
+
+### Webspace validation
+
+Webspaces which have unused localizations by portals will now be not valid and ignored. Remove this
+localizations or add them to a portal.
+
+### New security permission for cache
+ 
+To be able to clear the cache the user need the permission LIVE in the
+webspace context.
+
+### Document-Manager
+
+The Behaviors `TimestampBehavior` and `BlameBehavior` now save the values in the non-localized
+properties. To keep the old behavior use the `LocalizedTimestampBehavior` and 
+`LocalizedBlameBehavior` instead.
+
+### Deprecated sulu:phpcr:init and sulu:webspace:init
+
+The `sulu:phpcr:init` and `sulu:webspace:init` commands are now deprecated.
+Use the `sulu:document:initialize` command instead.
+
+### Definition of security contexts
+
+The definition of security contexts in the `Admin` classes has changed. They
+used to look like the following example:
+
+```php
+public function getSecurityContexts()
+{
+    return [
+        'Sulu' => [
+            'Media' => [
+                'sulu.media.collections',
+            ],
+        ],
+    ];
+}
+```
+
+Now you should also pass the permission types that you want to enable in the
+context:
+
+```php
+public function getSecurityContexts()
+{
+    return [
+        'Sulu' => [
+            'Media' => [
+                'sulu.media.collections' => [
+                    PermissionTypes::VIEW,
+                    PermissionTypes::ADD,
+                    PermissionTypes::EDIT,
+                    PermissionTypes::DELETE,
+                    PermissionTypes::SECURITY,
+                ],
+            ],
+        ],
+    ];
+}
+```
+
+By default, we will enable the permission types `VIEW`, `ADD`, `EDIT`, `DELETE`
+and `SECURITY` in your context.
+
+### Page search index
+
+The metadata for pages has changed. Run following command to update your search index
+
+```bash
+app/console massive:search:purge --all
+app/console massive:search:reindex
+```
+
+### Media uploads
+
+Write permissions for the webserver must be set on `web/uploads` instead of
+`web/uploads/media` alone to support simple cache clearing.
+
+### BlameSubscriber
+
+The BlameBehavior has been moved from the DocumentManager component to the
+Sulu Content component. Documents which implemented
+`Sulu\Component\DocumentManager\Behavior\Audit\BlameBehavior` should now
+implement `Sulu\Component\Content\Document\Behavior\BlameBehavior` instead.
+
+### Contact Entity is required for User
+
+When you create new `User` entities in your application it is required now
+that this user has a `Contact` entity. The following SQL will return you
+all users which have no contact entity. You need to update them manually.
+
+```sql
+SELECT * FROM se_users WHERE se_users.idContacts IS NULL 
+```
+
+### Admin Commands
+
+The method `getCommands` on the Admin has been removed, because Symfony can
+autodetect Commands in the `Command` directory of each bundle anyway. This only
+affects you, if you have not followed the Symfony standards and located your
+commands somewhere else.
+
+### WebsiteRequestAnalyzer
+
+The `Current`-part of all setters have been removed, because they have already
+been removed from the getters. This only affects you if you have overridden the
+`WebsiteRequestAnalyzer` and have called or overridden these methods.
+
+### Databases
+
+#### PHPCR
+
+A new namespace and additional system nodes were added. To create them run the following command:
+
+```bash
+app/console sulu:document:initialize
+```
+
+#### ORM
+
+The relational structure of categories, translations and users have changed. 
+Use the following command to update:
+
+```bash
+app/console doctrine:schema:update --force
+```
+
+It might be possible that foreign key checks have to be disabled for this update.
+
+### ContentNavigation & Navigation
+
+The ContentNavigationItems & NavigationItems will be sorted by their position. If there is no position set, the item
+will be placed behind all other items.
+
+```php
+$item = new ContentNavigationItem('content-navigation.entry');
+$item->setPosition(10);
+```
+
+## 1.1.10
+
+### Filter
+
+Update the schema `app/console doctrine:schema:update --force` and run following SQL-Statement:
+ 
+```sql
+UPDATE re_conditions SET value = CONCAT('"', value, '"') WHERE value NOT LIKE '"%"';
+INSERT INTO `re_operators` (`id`, `operator`, `type`, `inputType`) VALUES
+    (16, 'and', 5, 'tags'),
+    (17, 'or', 5, 'tags'),
+    (18, '=', 6, 'auto-complete'),
+    (19, '!=', 6, 'auto-complete');
+INSERT INTO `re_operator_translations` (`id`, `name`, `locale`, `shortDescription`, `longDescription`, `idOperators`) VALUES
+    (35, 'gleich', 'de', NULL, NULL, 18),
+    (36, 'is', 'en', NULL, NULL, 18),
+    (37, 'ungleich', 'de', NULL, NULL, 19),
+    (38, 'is not', 'en', NULL, NULL, 19),
+    (39, 'und', 'de', NULL, NULL, 16),
+    (40, 'and', 'en', NULL, NULL, 16),
+    (41, 'oder', 'de', NULL, NULL, 17),
+    (42, 'or', 'en', NULL, NULL, 17);
+```
+
+Additionally the filter by country has changed. Run following SQL script to update your filter conditions:
+
+```sql
+UPDATE `re_conditions` SET `field` = 'countryId', `type` = 6, `value` = CONCAT('"', (SELECT `id` FROM `co_countries` WHERE `code` = REPLACE(`re_conditions`. `value`, '"', '') LIMIT 1), '"') WHERE `field` = 'countryCode' AND `operator` != 'LIKE';
+
+DELETE FROM `re_filters` WHERE `re_filters`.`id` IN (SELECT `re_condition_groups`.`idFilters` FROM `re_condition_groups` LEFT JOIN `re_conditions` ON `re_condition_groups`.`id` = `re_conditions`.`idConditionGroups` WHERE `re_conditions`.`operator` = 'LIKE');
+```
+
+Filter with a "like" condition for country (account and contact) will be lost after the upgrade because there is no
+functionality for that anymore.
+
+## 1.1.2
+
+### Reindex-Command & Date Content-Type
+
+First remove the version node `201511240844` with following command:
+
+```bash
+app/console doctrine:phpcr:node:remove /jcr:versions/201511240844
+```
+
+Then run the migrate command (`app/console phpcr:migrations:migrate`) to remove translated properties with non locale
+and upgrade date-values within blocks.
+
+## 1.1.0
+
+### IndexName decorators from MassiveSearchBundle
+
+The names of the indexes in the system can now be altered using decorators. There
+is also a `PrefixDecorator`, which can prefixes the index name with an installation
+specific prefix, which can be set using the `massive_search.metadata.prefix`
+parameter.
+
+The configuration parameter `massive_search.localization_strategy` have been removed.
+
+The indexes have to be rebuilt using the following command:
+
+```bash
+app/console massive:search:index:rebuild --purge
+```
+
+### List-Toobar
+
+To enable a sticky behaviour take a look at the documentation <http://docs.sulu.io/en/latest/bundles/admin/javascript-hooks/sticky-toolbar.html>
+
+### Url Content-Type
+
+The old upgrade for the url content-type don't upgrade properties in blocks. Rerun the migrate command to upgrade them.
+
+```bash
+app/console phpcr:migrations:migrate
+```
+
+### User locking
+
+The locked toggler in the user tab of the contact section now sets the `locked`
+field in the `se_users` table. Before this setting was written to the
+`disabled` flag in the `co_contacts` table, which is removed now. If you have
+used this field make sure to backup the data before applying the following
+command:
+
+```bash
+app/console doctrine:schema:update --force
+```
+
+### Date Content-Type
+
+The type of the date value in the database was wrong to update your existing data use following command:
+
+```bash
+app/console phpcr:migrations:migrate
+```
+
+### Media View Settings
+
+The media collection thumbnailLarge view was removed from the media, 
+to avoid an error, remove all `collectionEditListView` from the user settings table.
+
+```sql
+DELETE FROM `se_user_settings` WHERE `settingsKey` = 'collectionEditListView';
+```
+### Search
+
+To index multiple fields (and `category_list` content-type) you have to add the attribute `type="array"` to the
+`sulu.search.field` tag. The `tag_list` content-type has its own search-field type `tags`
+(`<tag name="sulu.search.field" type="tags"/>`).
+
+### Category Content-Type
+
+The category content-type converts the selected ids into category data only for website rendering now. 
+
 ### System Collections
 
 Remove the config `sulu_contact.form.avatar_collection` and note it you will need it in the sql statement below for the
@@ -83,7 +622,7 @@ UPDATE co_urls AS url SET url.url = CONCAT('http://', url.url) WHERE url.url NOT
 To updated you content pages and snippets simply run:
 
 ```bash
-app/console doctrine:phpcr:migrator:migrate
+app/console phpcr:migrations:migrate
 ```
 
 Consider that the URL is now stored including the scheme (http://, ftp://, and so on), and therefore must not be
@@ -152,7 +691,7 @@ The function `getTranslation` was removed.  This avoid a INSERT SQL Exception wh
 ### Registering JS-Routes
 When registering backbone-routes now - instead of directly starting the corresponding component via 'this.html' - make your callback returning the component.
 So for example the following:
-```
+``` js
 sandbox.mvc.routes.push({
     route: 'contacts/accounts/edit::id/:content',
     callback: function(id) {
@@ -161,13 +700,38 @@ sandbox.mvc.routes.push({
 });
 ```
 becomes:
-```
+``` js
 sandbox.mvc.routes.push({
     route: 'contacts/accounts/edit::id/:content',
     callback: function(id) {
         return '<div data-aura-component="accounts/edit@sulucontact" data-aura-id="' + id + '"/>';
     }
 });
+```
+
+### Media Content Selection Type attribute changed
+
+When you use the sulu media selection in your custom bundle you need to change the `data-type`.
+
+**Before:**
+
+``` html
+<div id="{{ id|raw }}"
+    ...
+    data-type="mediaSelection"
+    data-aura-component="media-selection@sulumedia"
+    ...
+</div>
+```
+
+**After:**
+``` html
+<div id="{{ id|raw }}"
+    ...
+    data-type="media-selection"
+    data-aura-component="media-selection@sulumedia"
+    ...
+</div>
 ```
 
 ### Header
@@ -178,7 +742,7 @@ Some properties in the header-hook have changed, some are new, some not supporte
 The major work when upgrading to the new header is to change the button-templates to sulu-buttons. Before you had to pass a template like e.g. 'default', which initialized a set of buttons, now each button is passed explicitly which gives you more flexibility. Lets have a look at an example:
 
 **Before:**
-```
+```js
 header: {
     tabs: {
         url: '/admin/content-navigations?alias=category'
@@ -190,7 +754,7 @@ header: {
 ```
 
 **After:**
-```
+```js
 header: {
     tabs: {
         url: '/admin/content-navigations?alias=category'
@@ -210,7 +774,30 @@ header: {
 }
 ```
 
-If you are using the 'default' template in the header and now change to the sulu-buttons 'save' and 'delete' the emitted events are now `sulu.toolbar.save` instead of `sulu.header.toolbar.save` and 'sulu.toolbar.delete' instead of `sulu.header.toolbar.delete`. 
+If you are using the `default` template in the header and now change to the sulu-buttons `save` and `delete` the emitted events changed.
+
+| **Before**                    | **After**                    |
+|-------------------------------|------------------------------|
+| `sulu.header.toolbar.save`    | `sulu.toolbar.save`          |
+| `sulu.header.toolbar.delete`  | `sulu.toolbar.delete`        |
+
+Also the call for `disable`, `enable` and `loading` state of the `save` button has changed:
+
+**Before:**
+
+``` js
+this.sandbox.emit('sulu.header.toolbar.state.change', 'edit', false); // enable
+this.sandbox.emit('sulu.header.toolbar.state.change', 'edit', true, true); // disabled
+this.sandbox.emit('sulu.header.toolbar.item.loading', 'save-button'); // loading 
+```
+
+**After:**
+
+``` js
+this.sandbox.emit('sulu.header.toolbar.item.enable', 'save', false); // enable
+this.sandbox.emit('sulu.header.toolbar.item.disable', 'save', true); // disabled
+this.sandbox.emit('sulu.header.toolbar.item.loading', 'save'); // loading 
+```
 
 #### Tabs
 The tabs can be configured with the 'url', 'data' and 'container' option. The option 'fullControll' got removed. You can get the same effect by passing data with no 'component'-property.
@@ -222,7 +809,25 @@ Moreover the format of the buttons itself changed: https://github.com/massiveart
 Have a look at the documentation: http://docs.sulu.io/en/latest/bundles/admin/javascript-hooks/header.html
 
 #### Language changer
-The interface of the language-changer in the header hook stayed the same, however the emitted event changed from `sulu.header.toolbar.language-changed` to `sulu.header.language-changed`. A callback to this event recieves an object with an 'id'- and a 'title'-property.
+The interface of the language-changer in the header hook stayed the same, however the emitted event changed from `sulu.header.toolbar.language-changed` to `sulu.header.language-changed`. A callback to this event recieves an object with an `id`- and a `title`-property.
+
+**Before:**
+```js
+this.sandbox.on('sulu.header.toolbar.language-changed', this.languageChanged.bind(this));
+// ...
+languageChanged: function(locale) {
+    this.options.locale = locale;
+}
+```
+
+**After:**
+```js
+this.sandbox.on('sulu.header.language-changed', this.languageChanged.bind(this));
+// ...
+languageChanged: function(locale) {
+    this.options.locale = locale.id;
+}
+```
 
 #### Sulu-buttons
 Buttons for toolbars get specified in an aura-extension (`sandbox.sulu.buttons` and `sandbox.sulu.buttons.dropdownItems`). Therfore each bundle can add their own buttons to the pool. The toolbar in the header fetches its buttons from this pool.

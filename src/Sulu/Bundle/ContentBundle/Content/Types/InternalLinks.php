@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -81,24 +81,9 @@ class InternalLinks extends ComplexContentType implements ContentTypeExportInter
         if ($node->hasProperty($property->getName())) {
             $data = $node->getProperty($property->getName())->getString();
         }
-        $this->setData($data, $property);
-    }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function readForPreview(
-        $data,
-        PropertyInterface $property,
-        $webspaceKey,
-        $languageCode,
-        $segmentKey
-    ) {
-        if ($data instanceof ArrayableInterface) {
-            $data = $data->toArray();
-        }
-
-        $this->setData($data, $property);
+        $refs = isset($data) ? $data : [];
+        $property->setValue($refs);
     }
 
     /**
@@ -107,21 +92,8 @@ class InternalLinks extends ComplexContentType implements ContentTypeExportInter
     public function getReferencedUuids(PropertyInterface $property)
     {
         $data = $property->getValue();
-        $uuids = isset($data) ? $data : [];
 
-        return $uuids;
-    }
-
-    /**
-     * set data to property.
-     *
-     * @param string[]          $data     ids of images
-     * @param PropertyInterface $property
-     */
-    private function setData($data, PropertyInterface $property)
-    {
-        $refs = isset($data) ? $data : [];
-        $property->setValue($refs);
+        return isset($data) ? $data : [];
     }
 
     /**

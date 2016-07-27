@@ -29,7 +29,7 @@ Feature: Collection management
         Given the media collection "Foobar" exists
         And I am on the settings page for the media collection
         And I expect a data-navigation to appear
-        When I click the toolbar button "Delete collection"
+        When I click deleteCollection from the drop down
         And I expect a confirmation dialog to appear
         And I confirm
         Then I expect a success notification to appear
@@ -54,9 +54,10 @@ Feature: Collection management
         And I click the column navigation item "Collections"
         And I wait for the column navigation column 2
         And I double click the column navigation item "Foobar"
-        And I am on "/admin/"
-        And I wait a second
+        And I expect a data-navigation to appear
         And I am editing the media collection "Foobar"
+        And I click on the element ".fa-chevron-left"
+        And I expect the "husky.navigation.select-id" event
         Then I expect to see "1" ".data-navigation-item" elements
 
     Scenario: Delete item
@@ -70,3 +71,25 @@ Feature: Collection management
         And I confirm
         Then I expect a success notification to appear
 
+    Scenario: Change item language
+        Given the file "image1.png" has been uploaded to the "Dornbirn" collection
+        And I am on "/admin/#media/collections/root"
+        # FIXME bad fix here but data-navigation needs additional time ...
+        Then I expect a data-navigation to appear
+        When I click on the element ".masonry-item .head-image"
+        And I expect an overlay to appear
+        Then I expect the "husky.tabs.overlaymedia-edit.initialized" event
+        And I expect the "husky.dropzone.file-version.initialized" event
+        And I fill in husky field "title" with "image of Dornbirn"
+        And I select "de" from the husky "language-changer .husky-select"
+        And I expect the "husky.datagrid.records.change" event
+        Then I expect the "husky.tabs.overlaymedia-edit.initialized" event
+        And I expect the "husky.dropzone.file-version.initialized" event
+        And I fill in husky field "title" with "Foto von Dornbirn" in the overlay
+        And I confirm
+        Then I expect a success notification to appear
+        And I should see "image of Dornbirn"
+        And I click on the element ".language-changer"
+        And I click on the element "[data-id='de']"
+        And I expect the "husky.datagrid.updated" event
+        And I should see "Foto von Dornbirn"

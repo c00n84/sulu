@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -55,39 +55,33 @@ class CategoryList extends ComplexContentType implements ContentTypeExportInterf
     }
 
     /**
-     * Sets the given array as values on the property.
-     *
-     * @param array             $data
-     * @param PropertyInterface $property
-     */
-    protected function setData($data, PropertyInterface $property)
-    {
-        $property->setValue($data);
-    }
-
-    /**
      * {@inheritdoc}
      */
     public function read(NodeInterface $node, PropertyInterface $property, $webspaceKey, $languageCode, $segmentKey)
     {
-        $data = [];
         $categoryIds = $node->getPropertyValueWithDefault($property->getName(), []);
-        $categories = $this->categoryManager->findByIds($categoryIds);
-        $categories = $this->categoryManager->getApiObjects($categories, $languageCode);
-
-        foreach ($categories as $category) {
-            $data[] = $category->toArray();
-        }
-
-        $this->setData($data, $property);
+        $property->setValue($categoryIds);
     }
 
     /**
      * {@inheritdoc}
      */
-    public function readForPreview($data, PropertyInterface $property, $webspaceKey, $languageCode, $segmentKey)
+    public function getContentData(PropertyInterface $property)
     {
-        $this->setData($data, $property);
+        $ids = $property->getValue();
+        if (!is_array($ids) || empty($ids)) {
+            return [];
+        }
+
+        $data = [];
+        $categoryEntities = $this->categoryManager->findByIds($ids);
+        $categoryApiEntities = $this->categoryManager->getApiObjects($categoryEntities, $property->getStructure()->getLanguageCode());
+
+        foreach ($categoryApiEntities as $category) {
+            $data[] = $category->toArray();
+        }
+
+        return $data;
     }
 
     /**

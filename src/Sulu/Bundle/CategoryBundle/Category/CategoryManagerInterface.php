@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -59,7 +59,7 @@ interface CategoryManagerInterface
      *
      * @param string $key the key of the category
      *
-     * @return CategoryEntity
+     * @return Category
      */
     public function findByKey($key);
 
@@ -68,7 +68,7 @@ interface CategoryManagerInterface
      *
      * @param $ids
      *
-     * @return Category
+     * @return Category[]
      */
     public function findByIds(array $ids);
 

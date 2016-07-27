@@ -27,6 +27,7 @@ define([], function() {
             idKey: 'id',
             titleKey: 'title',
             resultKey: '',
+            disabledIds: [],
             translations: {
                 overlayTitle: 'single-internal-link.title',
                 noTitle: 'public.no-title'
@@ -57,9 +58,10 @@ define([], function() {
         templates = {
             skeleton: function(options) {
                 return [
-                    '<div class="grid-row" id="', options.ids.container, '">',
-                    '   <div class="grid-col-11"><input type="text" class="form-element preview-update trigger-save-button" readonly="readonly" id="', options.ids.input, '"/></div>',
-                    '   <div class="grid-col-1"><div class="btn action only-icon" id="', options.ids.button, '"><span class="fa-search icon"></span></div></div>',
+                    '<div class="single-internal-link container form-element" id="', options.ids.container, '">',
+                    '   <a class="fa-link icon action choose" href="#" id="', options.ids.button, '"></a>',
+                    '   <a class="fa-times-circle clear" href="#" id="', options.ids.clearButton, '"></a>',
+                    '   <input type="text" class="form-element preview-update trigger-save-button" readonly="readonly" id="', options.ids.input, '"/>',
                     '</div>'
                 ].join('');
             },
@@ -87,6 +89,7 @@ define([], function() {
                 container: 'single-internal-link-' + this.options.instanceName + '-container',
                 input: 'single-internal-link-' + this.options.instanceName + '-input',
                 button: 'single-internal-link-' + this.options.instanceName + '-button',
+                clearButton: 'single-internal-link-' + this.options.instanceName + '-clear-button',
                 columnNavigation: 'single-internal-link-' + this.options.instanceName + '-column-navigation'
             };
             this.sandbox.dom.html(this.$el, templates.skeleton(this.options));
@@ -120,11 +123,19 @@ define([], function() {
             if (this.data !== null) {
                 loadSelectedNode.call(this);
             }
+
+            bindDomEvents.call(this);
         },
 
         setData = function(data) {
             this.data = data;
             this.sandbox.dom.data(this.$el, 'single-internal-link', this.data);
+
+            if (!!data) {
+                $('#' + this.options.ids.clearButton).show();
+            } else {
+                $('#' + this.options.ids.clearButton).hide();
+            }
         },
 
         bindCustomEvents = function() {
@@ -139,6 +150,17 @@ define([], function() {
             }.bind(this));
         },
 
+        bindDomEvents = function() {
+            this.sandbox.dom.on('#' + this.options.ids.clearButton, 'click', function() {
+                setData.call(this, '');
+                this.$input.val('');
+
+                this.sandbox.emit(DATA_CHANGED.call(this), this.data, this.$el);
+
+                return false;
+            }.bind(this));
+        },
+
         initOverlay = function() {
             var $element = this.sandbox.dom.createElement('<div/>');
 
@@ -147,7 +169,7 @@ define([], function() {
                 {
                     name: 'overlay@husky',
                     options: {
-                        triggerEl: this.$button,
+                        triggerEl: this.$el,
                         cssClass: 'single-internal-overlay',
                         el: $element,
                         container: this.$el,
@@ -188,10 +210,10 @@ define([], function() {
                             actionIcon: 'fa-plus-circle',
                             resultKey: this.options.resultKey,
                             showOptions: false,
-                            showStatus: false,
                             responsive: false,
                             sortable: false,
-                            skin: 'fixed-height-small'
+                            skin: 'fixed-height-small',
+                            disableIds: this.options.disabledIds
                         }
                     }
                 ]
@@ -200,7 +222,7 @@ define([], function() {
 
         loadSelectedNode = function() {
             this.sandbox.util.load(getSingleUrl(this.options.url, this.data)).then(function(data) {
-                this.$input.val((data.title || this.sandbox.translate(this.options.translations.noTitle)) + ' (' + (data.path || '/') + ')');
+                this.$input.val((data.title || this.sandbox.translate(this.options.translations.noTitle)) + ' (' + data.url + ')');
             }.bind(this));
         },
 

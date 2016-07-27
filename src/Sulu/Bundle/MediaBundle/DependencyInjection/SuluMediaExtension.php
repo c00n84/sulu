@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -11,19 +11,17 @@
 
 namespace Sulu\Bundle\MediaBundle\DependencyInjection;
 
+use Sulu\Bundle\PersistenceBundle\DependencyInjection\PersistenceExtensionTrait;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface;
 use Symfony\Component\DependencyInjection\Loader;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
-/**
- * This is the class that loads and manages your bundle configuration.
- *
- * To learn more see {@link http://symfony.com/doc/current/cookbook/bundles/extension.html}
- */
 class SuluMediaExtension extends Extension implements PrependExtensionInterface
 {
+    use PersistenceExtensionTrait;
+
     /**
      * {@inheritdoc}
      */
@@ -35,6 +33,25 @@ class SuluMediaExtension extends Extension implements PrependExtensionInterface
                 ['indexes' => ['media' => ['security_context' => 'sulu.media.collections']]]
             );
         }
+
+        if ($container->hasExtension('sulu_media')) {
+            $container->prependExtensionConfig(
+                'sulu_media',
+                [
+                    'system_collections' => [
+                        'sulu_media' => [
+                            'meta_title' => ['en' => 'Sulu media', 'de' => 'Sulu Medien'],
+                            'collections' => [
+                                'preview_image' => [
+                                    'meta_title' => ['en' => 'Preview images', 'de' => 'Vorschaubilder'],
+                                ],
+                            ],
+                        ],
+                    ],
+                    'search' => ['enabled' => $container->hasExtension('massive_search')],
+                ]
+            );
+        }
     }
 
     /**
@@ -44,6 +61,12 @@ class SuluMediaExtension extends Extension implements PrependExtensionInterface
     {
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
+
+        // image-formats
+        $container->setParameter(
+            'sulu_media.image_format_file',
+            $container->getParameterBag()->resolveValue($config['image_format_file'])
+        );
 
         // system collections
         $container->setParameter('sulu_media.system_collections', $config['system_collections']);
@@ -122,11 +145,14 @@ class SuluMediaExtension extends Extension implements PrependExtensionInterface
         if (true === $config['search']['enabled']) {
             if (!class_exists('Sulu\Bundle\SearchBundle\SuluSearchBundle')) {
                 throw new \InvalidArgumentException(
-                    'You have enabled sulu search integration for the SuluMediaBundle, but the SuluSearchBundle must be installed'
+                    'You have enabled sulu search integration for the SuluMediaBundle, ' .
+                    'but the SuluSearchBundle must be installed'
                 );
             }
 
             $loader->load('search.xml');
         }
+
+        $this->configurePersistence($config['objects'], $container);
     }
 }

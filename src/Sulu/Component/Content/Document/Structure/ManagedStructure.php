@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -198,6 +198,8 @@ class ManagedStructure extends Structure
 
     public function bind($data, $clearMissing = true)
     {
+        $this->init();
+
         foreach ($this->structureMetadata->getProperties() as $childName => $child) {
             if (false === $clearMissing && !isset($data[$childName])) {
                 continue;

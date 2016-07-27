@@ -17,9 +17,20 @@ define([
 
     return {
 
+        collaboration: function() {
+            if (!this.options.id) {
+                return;
+            }
+            
+            return {
+                id: this.options.id,
+                type: 'contact'
+            };
+        },
+
         /**
          * Returns the header config for this main-view
-         * if an existing contact is edited a delete-button and a toggler get added
+         * if an existing contact is edited a delete-button is added
          * @return {Object} the header config object
          */
         header: function() {
@@ -30,11 +41,13 @@ define([
                 tabs: {
                     url: '/admin/content-navigations?alias=account',
                     options: {
-                        disablerToggler: 'husky.toggler.sulu-toolbar',
                         data: function() {
                             // this.data is set by sulu-content.js with data from loadComponentData()
                             return this.sandbox.util.extend(false, {}, this.data);
                         }.bind(this)
+                    },
+                    componentOptions: {
+                        values: this.data
                     }
                 },
                 toolbar: {
@@ -47,13 +60,6 @@ define([
             };
             if (!!this.options.id) {
                 config.toolbar.buttons.delete = {};
-                config.toolbar.buttons.disabler = {
-                    parent: 'toggler',
-                    options: {
-                        title: 'public.locked',
-                        hidden: true
-                    }
-                };
             }
             return config;
         },
@@ -127,7 +133,7 @@ define([
         saveTab: function() {
             var promise = $.Deferred();
             this.sandbox.once('sulu.tab.saved', function(savedData, updateData) {
-                if (!!updateData){
+                if (!!updateData) {
                     this.changeData(savedData)
                 }
                 promise.resolve(savedData);
@@ -164,6 +170,7 @@ define([
          */
         afterSave: function(action, savedData) {
             this.sandbox.emit('sulu.header.toolbar.item.disable', 'save', true);
+            this.sandbox.emit('sulu.header.saved', savedData);
             if (action === 'back') {
                 AccountRouter.toList();
             } else if (action === 'new') {

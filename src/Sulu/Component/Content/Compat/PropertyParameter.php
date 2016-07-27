@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -109,7 +109,7 @@ class PropertyParameter
      */
     public function hasTitle($languageCode)
     {
-        return ($this->metadata->get('title', $languageCode) !== null);
+        return $this->metadata->get('title', $languageCode) !== null;
     }
 
     /**
@@ -146,7 +146,7 @@ class PropertyParameter
         if (is_string($value)) {
             return $value;
         } elseif (is_bool($value)) {
-            return ($value ? 'true' : 'false');
+            return $value ? 'true' : 'false';
         } else {
             return '';
         }

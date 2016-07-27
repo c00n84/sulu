@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -13,7 +14,7 @@ namespace Sulu\Component\Media\SystemCollections;
 use Doctrine\ORM\EntityManagerInterface;
 use Sulu\Bundle\MediaBundle\Api\Collection;
 use Sulu\Bundle\MediaBundle\Collection\Manager\CollectionManagerInterface;
-use Symfony\Component\Config\ConfigCache;
+use Sulu\Component\Cache\CacheInterface;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 /**
@@ -47,7 +48,7 @@ class SystemCollectionManager implements SystemCollectionManagerInterface
     private $locale;
 
     /**
-     * @var ConfigCache
+     * @var CacheInterface
      */
     private $cache;
 
@@ -61,7 +62,7 @@ class SystemCollectionManager implements SystemCollectionManagerInterface
         CollectionManagerInterface $collectionManager,
         EntityManagerInterface $entityManager,
         TokenStorageInterface $tokenProvider = null,
-        ConfigCache $cache,
+        CacheInterface $cache,
         $locale
     ) {
         $this->config = $config;
@@ -116,10 +117,10 @@ class SystemCollectionManager implements SystemCollectionManagerInterface
                     $this->getUserId()
                 );
 
-                $this->cache->write(serialize($systemCollections));
+                $this->cache->write($systemCollections);
             }
 
-            $this->systemCollections = unserialize(file_get_contents($this->cache));
+            $this->systemCollections = $this->cache->read();
         }
 
         return $this->systemCollections;
@@ -203,7 +204,7 @@ class SystemCollectionManager implements SystemCollectionManagerInterface
      * @param string $title
      * @param string $locale
      * @param int $userId
-     * @param int|null $parent id of parent collection or null for root.
+     * @param int|null $parent id of parent collection or null for root
      *
      * @return Collection
      */
@@ -224,7 +225,7 @@ class SystemCollectionManager implements SystemCollectionManagerInterface
      * @param string $key
      * @param array $localizedTitles
      * @param int $userId
-     * @param int|null $parent id of parent collection or null for root.
+     * @param int|null $parent id of parent collection or null for root
      *
      * @return Collection
      */
@@ -254,8 +255,8 @@ class SystemCollectionManager implements SystemCollectionManagerInterface
      * @param string $key
      * @param string $locale
      * @param int $userId
-     * @param int|null $parent id of parent collection or null for root.
-     * @param int|null $id if not null a colleciton will be updated.
+     * @param int|null $parent id of parent collection or null for root
+     * @param int|null $id if not null a colleciton will be updated
      *
      * @return Collection
      */

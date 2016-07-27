@@ -21,12 +21,14 @@ define([], function() {
             eventNamespace: 'sulu.internal-links',
             resultKey: 'nodes',
             idKey: 'uuid',
-            columnNavigationUrl: '',
+            locale: null,
+            webspace: null,
             hideConfigButton: true,
             hidePositionElement: true,
             dataAttribute: 'internal-links',
             actionIcon: 'fa-link',
             dataDefault: [],
+            navigateEvent: 'sulu.router.navigate',
             translations: {
                 noContentSelected: 'internal-links.nolinks-selected',
                 addLinks: 'internal-links.add',
@@ -38,12 +40,16 @@ define([], function() {
         templates = {
             data: function(options) {
                 return [
-                    '<div id="', options.ids.columnNavigation, '"/>',
+                    '<div id="', options.ids.columnNavigation, '"/>'
                 ].join('');
             },
 
-            contentItem: function(value) {
-                return ['<span class="value">', value, '</span>'].join('');
+            contentItem: function(id, value) {
+                return [
+                    '<a href="#" data-id="', id, '" class="link">',
+                    '    <span class="value">', value, '</span>',
+                    '</a>'
+                ].join('');
             }
         },
 
@@ -58,9 +64,23 @@ define([], function() {
          * custom event handling
          */
         bindCustomEvents = function() {
-            this.sandbox.on('husky.overlay.internal-links.' + this.options.instanceName + '.add.initialized', initColumnNavigation.bind(this));
+            this.sandbox.on(
+                'husky.overlay.internal-links.' + this.options.instanceName + '.add.initialized',
+                initColumnNavigation.bind(this)
+            );
 
             this.sandbox.on('husky.column-navigation.' + this.options.instanceName + '.action', selectLink.bind(this));
+
+            this.sandbox.dom.on(this.$el, 'click', function(e) {
+                var id = this.sandbox.dom.data(e.currentTarget, 'id');
+
+                this.sandbox.emit(
+                    this.options.navigateEvent,
+                    'content/contents/' + this.options.webspace + '/' + this.options.locale + '/edit:' + id + '/content'
+                );
+
+                return false;
+            }.bind(this), 'a.link');
         },
 
         /**
@@ -73,7 +93,7 @@ define([], function() {
             if (data.indexOf(item.id) === -1) {
                 // FIXME return of node api returns for column-navigation id and for "filter by id" uuid as id key
                 item.uuid = item.id;
-                
+
                 data.push(item.id);
 
                 this.setData(data, false);
@@ -96,12 +116,14 @@ define([], function() {
                         name: 'column-navigation@husky',
                         options: {
                             el: getId.call(this, 'columnNavigation'),
-                            url: this.options.columnNavigationUrl,
+                            url: getColumnNavigationUrl.call(this),
+                            linkedName: 'linked',
+                            typeName: 'type',
+                            hasSubName: 'hasChildren',
                             instanceName: this.options.instanceName,
                             actionIcon: 'fa-plus-circle',
                             resultKey: this.options.resultKey,
                             showOptions: false,
-                            showStatus: true,
                             responsive: false,
                             skin: 'fixed-height-small',
                             markable: true,
@@ -111,6 +133,26 @@ define([], function() {
                     }
                 ]
             );
+        },
+
+        /**
+         * returns url for main column-navigation
+         *
+         * @returns {String}
+         */
+        getColumnNavigationUrl = function() {
+            var url = '/admin/api/nodes',
+                urlParts = [
+                    'language=' + this.options.locale,
+                    'fields=title,order,published',
+                    'webspace-nodes=all'
+                ];
+
+            if (!!this.options.webspace) {
+                urlParts.push('webspace=' + this.options.webspace);
+            }
+
+            return url + '?' + urlParts.join('&');
         },
 
         /**
@@ -177,7 +219,10 @@ define([], function() {
         },
 
         getItemContent: function(item) {
-            return templates.contentItem(item.title);
+            return templates.contentItem(
+                item[this.options.idKey],
+                item.title
+            );
         },
 
         sortHandler: function(ids) {

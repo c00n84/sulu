@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -20,6 +20,7 @@ use JMS\Serializer\Annotation\VirtualProperty;
 use Sulu\Bundle\MediaBundle\Entity\CollectionInterface;
 use Sulu\Bundle\MediaBundle\Entity\CollectionMeta;
 use Sulu\Bundle\MediaBundle\Entity\CollectionType;
+use Sulu\Component\Media\SystemCollections\SystemCollectionManagerInterface;
 use Sulu\Component\Rest\ApiWrapper;
 use Sulu\Component\Security\Authentication\UserInterface;
 
@@ -58,7 +59,7 @@ use Sulu\Component\Security\Authentication\UserInterface;
  *      "children",
  *      href = @Route(
  *          "get_collection",
- *          parameters = { "id" = "expr(object.getId())", "depth" = 1 }
+ *          parameters = { "id" = "expr(object.getId())", "depth" = 1, "sortBy": "title" }
  *      )
  * )
  * @Relation(
@@ -128,15 +129,19 @@ class Collection extends ApiWrapper
      */
     public function setChildren($children)
     {
-        $childrenEntities = [];
-
-        foreach ($children as $child) {
-            $childrenEntities[] = $child->getEntity();
-        }
-
         // FIXME remove cache for children and generate then on the fly
         //       reason: preview images cannot be generated without a service
         $this->children = $children;
+    }
+
+    /**
+     * Add child to resource.
+     *
+     * @param Collection $child
+     */
+    public function addChild(Collection $child)
+    {
+        $this->children[] = $child;
     }
 
     /**
@@ -490,7 +495,8 @@ class Collection extends ApiWrapper
      */
     public function getLocked()
     {
-        return !$this->entity->getType() || $this->entity->getType()->getKey() === 'collection.system';
+        return !$this->entity->getType()
+            || $this->entity->getType()->getKey() === SystemCollectionManagerInterface::COLLECTION_TYPE;
     }
 
     /**

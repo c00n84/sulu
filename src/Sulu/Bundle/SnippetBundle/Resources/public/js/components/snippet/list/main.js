@@ -16,8 +16,8 @@ define([
     'use strict';
 
     var template = [
-            '<div id="list-toolbar-container"></div>',
-            '<div id="snippet-list"></div>',
+            '<div id="list-toolbar-container" class="list-toolbar-container"></div>',
+            '<div id="snippet-list" class="datagrid-container"></div>',
             '<div id="dialog"></div>'
         ].join(''),
 
@@ -32,6 +32,7 @@ define([
     SnippetList.prototype.constructor = BaseSnippet;
 
     SnippetList.prototype.view = true;
+    SnippetList.prototype.stickyToolbar = true;
     SnippetList.prototype.layout = {
         content: {
             width: 'max'
@@ -49,7 +50,15 @@ define([
             toolbar: {
                 buttons: {
                     add: {},
-                    deleteSelected: {}
+                    deleteSelected: {},
+                    export: {
+                        options: {
+                            urlParameter: {
+                                flat: true
+                            },
+                            url: '/admin/api/snippets.csv'
+                        }
+                    }
                 },
                 languageChanger: {
                     preSelected: this.options.language

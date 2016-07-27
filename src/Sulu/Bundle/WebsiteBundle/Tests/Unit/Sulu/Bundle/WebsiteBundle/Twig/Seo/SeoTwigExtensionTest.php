@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -16,6 +17,8 @@ use Sulu\Component\Localization\Localization;
 use Sulu\Component\Webspace\Analyzer\RequestAnalyzerInterface;
 use Sulu\Component\Webspace\Portal;
 use Sulu\Component\Webspace\Webspace;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
 {
@@ -34,11 +37,33 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
      */
     private $contentPath;
 
+    /**
+     * @var RequestStack
+     */
+    private $requestStack;
+
+    /**
+     * @var Request
+     */
+    private $request;
+
     public function setUp()
     {
         $this->requestAnalyzer = $this->prophesize(RequestAnalyzerInterface::class);
         $this->contentPath = $this->prophesize(ContentPathInterface::class);
-        $this->seoTwigExtension = new SeoTwigExtension($this->requestAnalyzer->reveal(), $this->contentPath->reveal());
+        $this->requestStack = $this->prophesize(RequestStack::class);
+        $this->request = $this->prophesize(Request::class);
+        $this->request = $this->prophesize(Request::class);
+        $this->requestStack->getCurrentRequest()->willReturn($this->request->reveal());
+        $this->request->getScheme()->willReturn('https');
+
+        $this->seoTwigExtension = new SeoTwigExtension(
+            $this->requestAnalyzer->reveal(),
+            $this->contentPath->reveal(),
+            $this->requestStack->reveal()
+        );
+
+        $this->requestStack->getCurrentRequest()->willReturn($this->request->reveal());
     }
 
     public function testGetFunctions()
@@ -53,14 +78,6 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
 
     /**
      * @dataProvider provideSeoData
-     *
-     * @param $seoExtension
-     * @param $content
-     * @param $urls
-     * @param $defaultLocale
-     * @param $shadowBaseLocale
-     * @param $expectedResults
-     * @param array $unexpectedResults
      */
     public function testRenderSeoTags(
         $seoExtension,
@@ -68,29 +85,46 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
         $urls,
         $defaultLocale,
         $shadowBaseLocale,
+        $xDefaultLocale,
         $expectedResults,
-        $unexpectedResults = []
+        $unexpectedResults = [],
+        $resourceLocator = '/test',
+        $requestSeoData = []
     ) {
+        $this->request->get('_seo', [])->willReturn($requestSeoData);
+
         /** @var Localization $localization */
         $localization = $this->prophesize(Localization::class);
-        $localization->getLocalization()->willReturn($defaultLocale);
+        $localization->getLocalization()->willReturn($xDefaultLocale ?: $defaultLocale);
 
         /** @var Portal $portal */
         $portal = $this->prophesize(Portal::class);
-        $portal->getDefaultLocalization()->willReturn($localization->reveal());
+        $portal->getXDefaultLocalization()->willReturn($localization->reveal());
 
         $this->requestAnalyzer->getPortal()->willReturn($portal->reveal());
+        $this->requestAnalyzer->getResourceLocator()->willReturn($resourceLocator);
 
         $webspace = $this->prophesize(Webspace::class);
         $this->requestAnalyzer->getWebspace()->willReturn($webspace);
 
-        $this->contentPath->getContentPath(Argument::cetera())->will(
+        $this->contentPath->getContentPath(
+            Argument::any(),
+            Argument::any(),
+            Argument::any(),
+            null,
+            'https'
+        )->will(
             function ($arguments) {
                 return '/' . str_replace('_', '-', $arguments[2]) . $arguments[0];
             }
         );
 
-        $result = $this->seoTwigExtension->renderSeoTags($seoExtension, $content, $urls, $shadowBaseLocale);
+        $result = $this->seoTwigExtension->renderSeoTags(
+            $seoExtension,
+            $content,
+            $urls,
+            $shadowBaseLocale
+        );
 
         foreach ($expectedResults as $expectedResult) {
             $this->assertContains($expectedResult, $result);
@@ -103,6 +137,7 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
 
     public function testRenderSeoTagsWithoutPortal()
     {
+        $this->request->get('_seo', [])->willReturn([]);
         $this->seoTwigExtension->renderSeoTags([], [], [], null);
     }
 
@@ -128,6 +163,7 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
                 ],
                 'en',
                 'en',
+                null,
                 [
                     '<title>SEO title</title>',
                     '<meta name="description" content="SEO description"/>',
@@ -158,6 +194,7 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
                 ],
                 'de',
                 'en',
+                null,
                 [
                     '<title>Content title</title>',
                     '<meta name="robots" content="index,follow"/>',
@@ -189,6 +226,7 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
                     'de' => '/url-de',
                 ],
                 'de',
+                null,
                 null,
                 [
                     '<title>Content title</title>',
@@ -223,6 +261,7 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
                 ],
                 'de',
                 null,
+                null,
                 [
                     '<title>Content title</title>',
                     '<meta name="robots" content="index,follow"/>',
@@ -235,6 +274,177 @@ class SeoTwigExtensionTest extends \PHPUnit_Framework_TestCase
                 [
                     '<meta name="description" content=""/>',
                     '<meta name="keywords" content=""/>',
+                ],
+            ],
+            [
+                [],
+                [],
+                [
+                    'en' => '/url-en',
+                    'de' => '/url-de',
+                ],
+                'en',
+                'en',
+                'de',
+                [
+                    '<link rel="alternate" href="/en/url-en" hreflang="en"/>',
+                    '<link rel="alternate" href="/de/url-de" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/de/url-de" hreflang="de"/>',
+                ],
+            ],
+            [
+                [],
+                [],
+                [
+                    'en' => '/url-en',
+                    'de' => '/url-de',
+                    'de_at' => '/',
+                ],
+                'en',
+                'en',
+                null,
+                [
+                    '<link rel="alternate" href="/en/url-en" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/en/url-en" hreflang="en"/>',
+                    '<link rel="alternate" href="/de/url-de" hreflang="de"/>',
+                ],
+                [
+                    '<link rel="alternate" href="/de_at" hreflang="de_at"/>',
+                ],
+            ],
+            [
+                [],
+                [],
+                [
+                    'en' => '/',
+                    'de' => '/url-de',
+                ],
+                'en',
+                'en',
+                null,
+                [
+                    // no alternate link if translation is the only one
+                ],
+                [
+                    '<link rel="alternate" href="/de/url-de" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/de/url-de" hreflang="de"/>',
+                    '<link rel="alternate" href="/en" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/en" hreflang="en"/>',
+                ],
+            ],
+            [
+                [],
+                [],
+                [
+                    'en' => '/',
+                    'de' => '/url-de',
+                ],
+                'de',
+                'en',
+                'en',
+                [
+                    // no alternate link if translation is the only one
+                ],
+                [
+                    '<link rel="alternate" href="/de/url-de" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/de/url-de" hreflang="de"/>',
+                    '<link rel="alternate" href="/en" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/en" hreflang="en"/>',
+                ],
+            ],
+            [
+                [],
+                [],
+                [
+                    'en' => '/',
+                    'de' => '/',
+                ],
+                'en',
+                'en',
+                null,
+                [
+                    '<link rel="alternate" href="/en" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/en" hreflang="en"/>',
+                    '<link rel="alternate" href="/de" hreflang="de"/>',
+                ],
+                [],
+                false,
+            ],
+            [
+                [
+                    'title' => 'SEO title',
+                    'description' => 'SEO description',
+                    'keywords' => 'SEO keywords',
+                    'canonicalUrl' => '/canonical-url',
+                    'noIndex' => true,
+                    'noFollow' => true,
+                    'hideInSitemap' => true,
+                ],
+                [
+                    'title' => 'Content title',
+                ],
+                [
+                    'en' => '/url-en',
+                    'de' => '/url-de',
+                ],
+                'en',
+                'en',
+                null,
+                [
+                    '<title>SEO title</title>',
+                    '<meta name="description" content="SEO description"/>',
+                    '<meta name="keywords" content="SEO keywords"/>',
+                    '<meta name="robots" content="index,follow"/>',
+                    '<link rel="alternate" href="/en/url-en" hreflang="x-default"/>',
+                    '<link rel="alternate" href="/en/url-en" hreflang="en"/>',
+                    '<link rel="alternate" href="/de/url-de" hreflang="de"/>',
+                    '<link rel="canonical" href="/test-url"/>',
+                ],
+                [],
+                false,
+                [
+                    'canonicalUrl' => '/test-url',
+                    'noIndex' => false,
+                    'noFollow' => false,
+                ],
+            ],
+            [
+                [
+                    'title' => '"SEO title"',
+                    'description' => '"SEO description"',
+                    'keywords' => '"SEO keywords"',
+                ],
+                [],
+                [
+                    'en' => '/url-en',
+                ],
+                'en',
+                'en',
+                null,
+                [
+                    '<title>&quot;SEO title&quot;</title>',
+                    '<meta name="description" content="&quot;SEO description&quot;"/>',
+                    '<meta name="keywords" content="&quot;SEO keywords&quot;"/>',
+                ],
+            ],
+            [
+                [
+                    'description' => '"SEO description"',
+                    'keywords' => '"SEO keywords"',
+                ],
+                [
+                    'title' => '"Content title"',
+                ],
+                [
+                    'en' => '/url-en',
+                ],
+                'en',
+                'en',
+                null,
+                [
+                    '<title>&quot;Content title&quot;</title>',
+                    '<meta name="description" content="&quot;SEO description&quot;"/>',
+                    '<meta name="keywords" content="&quot;SEO keywords&quot;"/>',
                 ],
             ],
         ];

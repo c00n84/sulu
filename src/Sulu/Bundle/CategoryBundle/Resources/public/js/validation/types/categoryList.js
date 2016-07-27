@@ -14,26 +14,38 @@ define([
 
     'use strict';
 
-    var itemHandler = function() {
-        App.emit('sulu.content.changed');
-    };
 
     return function($el, options) {
-        var defaults = {
-
-            },
+        var defaults = {},
 
             typeInterface = {
                 initializeSub: function() {
-                    App.off('husky.datagrid.categories.item.select', itemHandler);
-                    App.on('husky.datagrid.categories.item.select', itemHandler);
+                    App.off('husky.datagrid.' + this.options.instanceName + '.item.select');
+                    App.off('husky.datagrid.' + this.options.instanceName + '.item.deselect');
 
-                    App.off('husky.datagrid.categories.item.deselect', itemHandler);
-                    App.on('husky.datagrid.categories.item.deselect', itemHandler);
+                    App.on(
+                        'husky.datagrid.' + this.options.instanceName + '.item.select',
+                        this.itemHandler.bind(this)
+                    );
+                    App.on(
+                        'husky.datagrid.' + this.options.instanceName + '.item.deselect',
+                        this.itemHandler.bind(this)
+                    );
                 },
 
-                setValue: function(value) {
-                    App.dom.data($el, 'selected', value);
+                itemHandler: function() {
+                    App.emit('sulu.preview.update', $el, this.getValue());
+                    App.emit('sulu.content.changed');
+                },
+
+                setValue: function(categories) {
+                    // At the moment setValue gets called with objects but the
+                    // datagrid works only with ids internally.
+                    // TODO: find a common representation
+                    categories = categories.map(function(category) {
+                        return (!!category.id) ? category.id : category;
+                    });
+                    App.dom.data($el, 'selected', categories);
                 },
 
                 getValue: function() {

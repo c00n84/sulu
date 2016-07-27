@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -23,7 +24,14 @@ class AccountDataProvider extends BaseDataProvider
     {
         parent::__construct($repository, $serializer);
 
-        $this->configuration = $this->initConfiguration(true, true, true, true, true, []);
+        $this->configuration = self::createConfigurationBuilder()
+            ->enableTags()
+            ->enableCategories()
+            ->enableLimit()
+            ->enablePagination()
+            ->enablePresentAs()
+            ->setDeepLink('contacts/accounts/edit:{id}/details')
+            ->getConfiguration();
     }
 
     /**
@@ -44,6 +52,6 @@ class AccountDataProvider extends BaseDataProvider
      */
     protected function getSerializationContext()
     {
-        return parent::getSerializationContext()->setGroups(['fullAccount', 'partialContact']);
+        return parent::getSerializationContext()->setGroups(['fullAccount', 'partialContact', 'partialCategory']);
     }
 }

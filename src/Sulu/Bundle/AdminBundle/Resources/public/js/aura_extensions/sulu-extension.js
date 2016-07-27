@@ -105,10 +105,15 @@
              * @param excludeAttributes Defines which Attributes should NOT be taken from user-settings and from fields API instead
              * @param url Where
              * @param callback
+             * @param filter callback to filter result
              */
-            app.sandbox.sulu.loadUrlAndMergeWithSetting = function(key, excludeAttributes, url, callback) {
+            app.sandbox.sulu.loadUrlAndMergeWithSetting = function(key, excludeAttributes, url, callback, filter) {
                 this.sandbox.util.load(url)
                     .then(function(data) {
+                        if (!!filter && typeof filter === 'function') {
+                            data = _.filter(data, filter);
+                        }
+
                         var userFields = app.sandbox.sulu.getUserSetting(key),
                             serverFields = data,
                             settingsArray = [],
@@ -266,7 +271,7 @@
                  * @param order
                  */
                 insertOrderParamsInUrl = function(url, order) {
-                    if (!!order && !!order.length) {
+                    if (!!order) {
                         var idxBy = url.indexOf('sortBy'),
                             idxOrder = url.indexOf('sortOrder'),
                             divider = '&';
@@ -492,7 +497,10 @@
                         fieldsKey,
                         ['translation', 'default', 'editable', 'validation', 'width', 'type'],
                         url,
-                        callback.bind(this)
+                        callback.bind(this),
+                        function(item) {
+                            return !item.display || item.display !== 'never';
+                        }
                     );
                 } else {
                     callback.call(this, fields);

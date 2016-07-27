@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -13,8 +13,10 @@ namespace Sulu\Bundle\MediaBundle\Entity;
 
 use Doctrine\ORM\NoResultException;
 use Doctrine\ORM\Query;
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\Tools\Pagination\Paginator;
 use Gedmo\Tree\Entity\Repository\NestedTreeRepository;
+use Sulu\Component\Media\SystemCollections\SystemCollectionManagerInterface;
 use Sulu\Component\Security\Authentication\UserInterface;
 use Sulu\Component\Security\Authorization\AccessControl\SecuredEntityRepositoryTrait;
 
@@ -91,10 +93,12 @@ class CollectionRepository extends NestedTreeRepository implements CollectionRep
 
             if (array_key_exists('search', $filter) && $filter['search'] !== null) {
                 $queryBuilder->andWhere('collectionMeta.title LIKE :search');
+                $queryBuilder->setParameter('search', '%' . $filter['search'] . '%');
             }
 
             if (array_key_exists('locale', $filter)) {
                 $queryBuilder->andWhere('collectionMeta.locale = :locale OR defaultMeta.locale != :locale');
+                $queryBuilder->setParameter('locale', $filter['locale']);
             }
 
             if ($sortBy !== null && is_array($sortBy) && count($sortBy) > 0) {
@@ -104,6 +108,12 @@ class CollectionRepository extends NestedTreeRepository implements CollectionRep
                         (strtolower($order) === 'asc' ? 'ASC' : 'DESC')
                     );
                 }
+            }
+
+            if (array_key_exists('systemCollections', $filter) && !$filter['systemCollections']) {
+                $queryBuilder->andWhere(
+                    'collectionType.key != \'' . SystemCollectionManagerInterface::COLLECTION_TYPE . '\''
+                );
             }
 
             if ($user !== null && $permission != null) {
@@ -122,20 +132,12 @@ class CollectionRepository extends NestedTreeRepository implements CollectionRep
                 $query->setParameter('id', $collection->getId());
             }
 
-            if (array_key_exists('search', $filter) && $filter['search'] !== null) {
-                $query->setParameter('search', '%' . $filter['search'] . '%');
-            }
-
             if (array_key_exists('limit', $filter)) {
                 $query->setMaxResults($filter['limit']);
             }
 
             if (array_key_exists('offset', $filter)) {
                 $query->setFirstResult($filter['offset']);
-            }
-
-            if (array_key_exists('locale', $filter)) {
-                $query->setParameter('locale', $filter['locale']);
             }
 
             return new Paginator($query);
@@ -252,5 +254,47 @@ class CollectionRepository extends NestedTreeRepository implements CollectionRep
         } catch (NoResultException $ex) {
             return;
         }
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function findTree($id, $locale)
+    {
+        $subQueryBuilder = $this->createQueryBuilder('subCollection')
+            ->select('subCollection.id')
+            ->leftJoin($this->_entityName, 'c', Join::WITH, 'c.id = :id')
+            ->andWhere('subCollection.lft <= c.lft AND subCollection.rgt > c.lft');
+
+        $queryBuilder = $this->createQueryBuilder('collection')
+            ->addSelect('meta')
+            ->addSelect('defaultMeta')
+            ->addSelect('type')
+            ->addSelect('parent')
+            ->leftJoin('collection.meta', 'meta', Join::WITH, 'meta.locale = :locale')
+            ->leftJoin('collection.defaultMeta', 'defaultMeta')
+            ->innerJoin('collection.type', 'type')
+            ->leftJoin('collection.parent', 'parent')
+            ->where(sprintf('parent.id IN (%s)', $subQueryBuilder->getDQL()))
+            ->orWhere('parent.id is NULL')
+            ->orderBy('collection.lft')
+            ->setParameter('id', $id)
+            ->setParameter('locale', $locale);
+
+        return $queryBuilder->getQuery()->getResult();
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function findCollectionTypeById($id)
+    {
+        $queryBuilder = $this->createQueryBuilder('collection')
+            ->select('collectionType.key')
+            ->leftJoin('collection.type', 'collectionType')
+            ->where('collection.id = :id')
+            ->setParameter('id', $id);
+
+        return $queryBuilder->getQuery()->getSingleScalarResult();
     }
 }

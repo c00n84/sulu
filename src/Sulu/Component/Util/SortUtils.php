@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -16,7 +16,7 @@ use Symfony\Component\PropertyAccess\PropertyAccess;
 /**
  * Sorting utilities.
  */
-class SortUtils
+final class SortUtils
 {
     /**
      * Cannot instantiate this class.

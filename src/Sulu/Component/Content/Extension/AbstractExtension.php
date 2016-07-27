@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -118,5 +118,13 @@ abstract class AbstractExtension implements ExtensionInterface
     public function getContentData($container)
     {
         return $container;
+    }
+
+    /**
+     * {@inheritdoc}
+     */
+    public function getFieldMapping()
+    {
+        return [];
     }
 }

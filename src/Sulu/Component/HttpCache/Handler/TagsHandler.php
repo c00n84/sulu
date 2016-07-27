@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -49,7 +49,7 @@ class TagsHandler implements
     /**
      * @param WebspaceManagerInterface $webspaceManager
      * @param CacheHandler             $cacheInvalidator
-     * @param string                   $environment      - kernel envionment, dev, prod, etc.
+     * @param string                   $environment      - kernel envionment, dev, prod, etc
      * @param null                     $logger
      */
     public function __construct(

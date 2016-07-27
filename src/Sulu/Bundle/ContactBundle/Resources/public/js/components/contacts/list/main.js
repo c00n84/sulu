@@ -52,6 +52,8 @@ define([
                 this.sandbox.emit('husky.datagrid.' + constants.datagridInstanceName + '.view.change', 'table');
                 this.sandbox.emit('husky.datagrid.' + constants.datagridInstanceName + '.pagination.change', 'dropdown');
                 this.sandbox.emit('husky.datagrid.' + constants.datagridInstanceName + '.change.page', 1);
+
+                this.sandbox.stickyToolbar.reset(this.$el);
             }.bind(this));
 
             this.sandbox.on('sulu.toolbar.change.cards', function() {
@@ -67,6 +69,8 @@ define([
                     'husky.datagrid.' + constants.datagridInstanceName + '.pagination.change', 'infinite-scroll'
                 );
                 this.sandbox.emit('husky.datagrid.' + constants.datagridInstanceName + '.change.page', 1);
+
+                this.sandbox.stickyToolbar.reset(this.$el);
             }.bind(this));
         },
 
@@ -84,6 +88,8 @@ define([
 
     return {
 
+        stickyToolbar: true,
+
         layout: {
             content: {
                 width: 'max'
@@ -99,7 +105,15 @@ define([
             toolbar: {
                 buttons: {
                     add: {},
-                    deleteSelected: {}
+                    deleteSelected: {},
+                    export: {
+                        options: {
+                            urlParameter: {
+                                flat: true
+                            },
+                            url: '/admin/api/contacts.csv'
+                        }
+                    }
                 }
             }
         },
@@ -141,7 +155,7 @@ define([
                 el: this.sandbox.dom.find('#people-list', this.$el),
                 url: '/admin/api/contacts?flat=true',
                 searchInstanceName: 'contacts',
-                searchFields: ['fullName'],
+                searchFields: ['fullName', 'mainEmail'],
                 resultKey: 'contacts',
                 instanceName: constants.datagridInstanceName,
                 actionCallback: actionCallback.bind(this),

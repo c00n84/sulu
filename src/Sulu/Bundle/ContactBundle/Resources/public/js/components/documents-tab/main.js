@@ -16,6 +16,8 @@ define([
 
     return {
 
+        stickyToolbar: 140,
+
         layout: function() {
             return {
                 content: {
@@ -169,7 +171,7 @@ define([
             this.sandbox.dom.append(this.$el, $container);
 
             this.sandbox.start([{
-                name: 'media-selection-overlay@sulumedia',
+                name: 'media-selection/overlay@sulumedia',
                 options: {
                     el: $container,
                     instanceName: 'documents',

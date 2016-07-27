@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -27,11 +28,17 @@ class ItemCollectionRepresentation extends CollectionRepresentation
      */
     private $datasource;
 
+    /**
+     * @var int
+     */
+    private $total;
+
     public function __construct(array $items, $datasource)
     {
         parent::__construct($items, 'items');
 
         $this->datasource = $datasource;
+        $this->total = count($items);
     }
 
     /**
@@ -44,5 +51,17 @@ class ItemCollectionRepresentation extends CollectionRepresentation
     public function getDatasource()
     {
         return $this->datasource;
+    }
+
+    /**
+     * Returns amount of items.
+     *
+     * @return int
+     *
+     * @VirtualProperty()
+     */
+    public function getTotal()
+    {
+        return $this->total;
     }
 }

@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -80,5 +81,12 @@ interface ProviderConfigurationInterface
      *
      * @return bool
      */
-    public function getPaginated();
+    public function hasPagination();
+
+    /**
+     * Returns deep-link template.
+     *
+     * @return string
+     */
+    public function getDeepLink();
 }

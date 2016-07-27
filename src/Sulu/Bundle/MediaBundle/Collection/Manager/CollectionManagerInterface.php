@@ -61,6 +61,16 @@ interface CollectionManagerInterface
     public function getByKey($key, $locale);
 
     /**
+     * Returns tree for given id. Including all parents with sliblings and children.
+     *
+     * @param int $id
+     * @param string $locale
+     *
+     * @return Collection[]
+     */
+    public function getTreeById($id, $locale);
+
+    /**
      * Returns collections from root with given depth.
      *
      * @param string $locale the locale which the collection should be return
@@ -69,10 +79,11 @@ interface CollectionManagerInterface
      * @param string $search
      * @param int $depth maximum depth for query
      * @param array $sortBy
+     * @param bool $systemCollections Whether or not system collectino should be included in the result
      *
      * @return \Sulu\Bundle\MediaBundle\Api\Collection[]
      */
-    public function getTree($locale, $offset, $limit, $search, $depth = 0, $sortBy = []);
+    public function getTree($locale, $offset, $limit, $search, $depth = 0, $sortBy = [], $systemCollections = true);
 
     /**
      * Returns a collection count.

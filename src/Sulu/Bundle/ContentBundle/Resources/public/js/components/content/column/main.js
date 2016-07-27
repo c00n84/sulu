@@ -8,9 +8,10 @@
  */
 
 define([
+    'config',
     'sulucontent/components/open-ghost-overlay/main',
     'sulusecurity/services/security-checker'
-], function(OpenGhost, SecurityChecker) {
+], function(Config, OpenGhost, SecurityChecker) {
 
     'use strict';
 
@@ -110,7 +111,7 @@ define([
         },
 
         /**
-         * Enaber for ORDER
+         * Enabler for ORDER
          * @param column
          * @returns {boolean}
          */
@@ -124,7 +125,9 @@ define([
                 }
             });
 
-            return column.numberItems > 1 && editChildrenPermission && checkParentSecurity(column, 'edit');
+            return column.numberItems > 1
+                && editChildrenPermission
+                && checkParentSecurity(column, 'edit', this.options.webspace);
         },
 
         /**
@@ -133,23 +136,26 @@ define([
          * @returns {boolean}
          */
         addButtonEnabler = function(column) {
-            return checkParentSecurity(column, 'add');
+            return checkParentSecurity(column, 'add', this.options.webspace);
         },
 
         /**
          * Checks if the selected item in the parent column has the given permission
          * @param column
          * @param permission
+         * @param webspace
          * @returns {boolean}
          */
-        checkParentSecurity = function(column, permission) {
+        checkParentSecurity = function(column, permission, webspace) {
             if (!!column.parent) {
                 if (!!column.parent.hasOwnProperty('_permissions')) {
                     return column.parent._permissions[permission];
                 }
 
                 if (!column.parent.selectedItem) {
-                    return true;
+                    var config = Config.get('sulu_security.contexts')['sulu.webspaces.' + webspace];
+
+                    return !!config[permission];
                 }
             }
 
@@ -173,6 +179,7 @@ define([
             this.sandbox.sulu.triggerDeleteSuccessLabel();
 
             this.showGhostPages = true;
+            this.showWebspaceNode = false;
             this.setShowGhostPages();
         },
 
@@ -184,6 +191,13 @@ define([
             if (showGhostPages !== null) {
                 this.showGhostPages = JSON.parse(showGhostPages);
             }
+        },
+
+        /**
+         * Sets the showWebspaceNode variable
+         */
+        setShowWebspaceNode: function(show) {
+            this.showWebspaceNode = show;
         },
 
         /**
@@ -333,7 +347,8 @@ define([
          * @param {Object} item item selected in column-navigation
          */
         deleteSelected: function(item) {
-            this.sandbox.once('sulu.preview.deleted', function() {
+            this.sandbox.once('sulu.content.content.deleted', function() {
+                this.deleteLastSelected();
                 this.restartColumnNavigation();
             }.bind(this));
             this.sandbox.emit('sulu.content.content.delete', item.id);
@@ -425,17 +440,8 @@ define([
          * @param {String} id of selected item
          */
         startOverlayColumnNavigation: function(id) {
-            var url = '/admin/api/nodes',
-                urlParams = [
-                    'tree=true',
-                    'webspace=' + this.options.webspace,
-                    'language=' + this.options.language,
-                    'webspace-node=true'
-                ];
-
-            if (!!id) {
-                urlParams.push('id=' + id);
-            }
+            this.setShowWebspaceNode(true);
+            var url = this.getUrl(id);
 
             this.sandbox.start(
                 [
@@ -444,12 +450,14 @@ define([
                         options: {
                             el: '#child-column-navigation',
                             selected: id,
-                            url: url + '?' + urlParams.join('&'),
+                            resultKey: 'nodes',
+                            linkedName: 'linked',
+                            typeName: 'type',
+                            hasSubName: 'hasChildren',
+                            url: url,
                             instanceName: 'overlay',
                             actionIcon: 'fa-check-circle',
-                            resultKey: this.options.resultKey,
                             showOptions: false,
-                            showStatus: false,
                             responsive: false,
                             sortable: false,
                             skin: 'fixed-height-small',
@@ -502,7 +510,7 @@ define([
          */
         restartColumnNavigation: function() {
             this.sandbox.stop('#content-column');
-
+            this.setShowWebspaceNode(false);
             this.startColumnNavigation();
         },
 
@@ -521,7 +529,10 @@ define([
                         instanceName: 'node',
                         selected: this.getLastSelected(),
                         resultKey: 'nodes',
-                        url: this.getUrl(),
+                        linkedName: 'linked',
+                        typeName: 'type',
+                        hasSubName: 'hasChildren',
+                        url: this.getUrl(this.getLastSelected()),
                         actionIcon: getActionIcon.bind(this),
                         addButton: addButtonEnabler.bind(this),
                         data: [
@@ -588,20 +599,34 @@ define([
         },
 
         /**
+         * delete last selected id to user settings
+         * @param {String} id
+         */
+        deleteLastSelected: function(id) {
+            this.sandbox.sulu.deleteUserSetting(this.options.webspace + 'ColumnNavigationSelected');
+        },
+
+        /**
          * returns url for main column-navigation
          * @returns {String}
          */
-        getUrl: function() {
-            if (this.getLastSelected() !== null) {
-                return '/admin/api/nodes?id=' + this.getLastSelected() + '&tree=true&webspace=' + this.options.webspace +
-                    '&language=' + this.options.language +
-                    '&exclude-ghosts=' + (!this.showGhostPages ? 'true' : 'false') +
-                    '&exclude-shadows=' + (!this.showGhostPages ? 'true' : 'false');
-            } else {
-                return '/admin/api/nodes?depth=1&webspace=' + this.options.webspace +
-                    '&language=' + this.options.language +
-                    '&exclude-ghosts=' + (!this.showGhostPages ? 'true' : 'false');
+        getUrl: function(selected) {
+            var url = '/admin/api/nodes',
+                urlParts = [
+                    'webspace=' + this.options.webspace,
+                    'language=' + this.options.language,
+                    'fields=title,order,published',
+                    'exclude-ghosts=' + (!this.showGhostPages ? 'true' : 'false'),
+                    'exclude-shadows=' + (!this.showGhostPages ? 'true' : 'false'),
+                     (this.showWebspaceNode ? 'webspace-nodes=single' : '')
+                ];
+
+            if (!!selected) {
+                url += '/' + selected;
+                urlParts.push('tree=true');
             }
+
+            return url + '?' + urlParts.join('&');
         },
 
         /**

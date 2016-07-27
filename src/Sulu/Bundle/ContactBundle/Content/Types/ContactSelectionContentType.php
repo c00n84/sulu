@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -97,20 +98,9 @@ class ContactSelectionContentType extends ComplexContentType implements ContentT
         if ($node->hasProperty($property->getName())) {
             $values = $node->getPropertyValue($property->getName());
         }
-        $this->setData($values, $property);
-    }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function readForPreview(
-        $data,
-        PropertyInterface $property,
-        $webspaceKey,
-        $languageCode,
-        $segmentKey
-    ) {
-        $this->setData($data, $property);
+        $refs = isset($values) ? $values : [];
+        $property->setValue($refs);
     }
 
     /**

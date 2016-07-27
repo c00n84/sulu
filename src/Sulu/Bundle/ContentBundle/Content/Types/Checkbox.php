@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -37,18 +37,6 @@ class Checkbox extends SimpleContentType
     /**
      * {@inheritdoc}
      */
-    public function readForPreview($data, PropertyInterface $property, $webspaceKey, $languageCode, $segmentKey)
-    {
-        if ($data !== null && $data !== false && $data !== 'false' && $data !== '') {
-            $property->setValue(true);
-        } else {
-            $property->setValue(false);
-        }
-    }
-
-    /**
-     * {@inheritdoc}
-     */
     public function write(
         NodeInterface $node,
         PropertyInterface $property,
@@ -77,6 +65,17 @@ class Checkbox extends SimpleContentType
     }
 
     /**
+     * @param PropertyInterface|null $property
+     * @return array
+     */
+    public function getDefaultParams(PropertyInterface $property = null)
+    {
+        return [
+            'type' => 'checkbox',
+        ];
+    }
+
+    /**
      * {@inheritdoc}
      */
     public function importData(
@@ -92,5 +91,6 @@ class Checkbox extends SimpleContentType
         }
 
         parent::importData($node, $property, $userId, $webspaceKey, $languageCode, $segmentKey);
+
     }
 }

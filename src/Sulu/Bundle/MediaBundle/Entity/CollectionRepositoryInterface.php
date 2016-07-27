@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -77,4 +77,23 @@ interface CollectionRepositoryInterface
      * @return Collection
      */
     public function findCollectionByKey($key);
+
+    /**
+     * Finds the parent collections and all the sliblings of them + the children of given id.
+     *
+     * @param id $id
+     * @param string $locale
+     *
+     * @return Collection[]
+     */
+    public function findTree($id, $locale);
+
+    /**
+     * Returns collection-type for collection-id.
+     *
+     * @param int $id
+     *
+     * @return string
+     */
+    public function findCollectionTypeById($id);
 }

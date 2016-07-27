@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -31,7 +31,7 @@ abstract class SimpleContentType implements ContentTypeInterface, ContentTypeExp
      *
      * @var mixed
      */
-    private $defaultValue;
+    protected $defaultValue;
 
     public function __construct($name, $defaultValue = null)
     {
@@ -62,14 +62,6 @@ abstract class SimpleContentType implements ContentTypeInterface, ContentTypeExp
         $property->setValue($value);
 
         return $value;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function readForPreview($data, PropertyInterface $property, $webspaceKey, $languageCode, $segmentKey)
-    {
-        $property->setValue($data);
     }
 
     /**

@@ -83,7 +83,10 @@ define(function() {
             }
 
             if (!!id) {
-                var strSearch = 'edit:' + id;
+                var regex = new RegExp("\\w*:" + id),
+                    result = regex.exec(url),
+                    strSearch = result[0];
+
                 url = url.substr(0, url.indexOf(strSearch) + strSearch.length);
             }
 
@@ -291,11 +294,13 @@ define(function() {
             }
 
             getTabsData.call(this, header).then(function(tabsData) {
-                if (!!$('body').find('.sulu-header').length) {
+                var $container = this.sandbox.dom.createElement('<div class="sulu-header"/>'),
+                    $header = $('.sulu-header');
+
+                if (!!$header.length) {
                     Husky.stop('.sulu-header');
-                    $('body').find('.sulu-header').remove();
+                    $header.remove();
                 }
-                var $container = this.sandbox.dom.createElement('<div class="sulu-header"/>');
                 this.sandbox.dom.prepend('.content-column', $container);
 
                 this.sandbox.start([{
@@ -326,7 +331,7 @@ define(function() {
         /**
          * Loades and prepares the tabs-data for a header object
          * @param header {Object} the header object
-         * @returns {Deffered} a deferred-object with a then method
+         * @returns {Deferred} a deferred-object with a then method
          */
         getTabsData = function(header) {
             var loaded = this.sandbox.data.deferred();
@@ -379,7 +384,15 @@ define(function() {
         app.components.before('initialize', function() {
             //load view data before rendering tabs
             var dataLoaded = $.Deferred(),
-                afterData = $.Deferred();
+                afterData = $.Deferred(),
+                resolveData = function(data) {
+                    if (!!data) {
+                        this.data = data;
+                    }
+                    executeAfterDataHandler.call(this).then(function() {
+                        afterData.resolve();
+                    }.bind(this));
+                };
 
             executeBeforeDataHandler.call(this);
 
@@ -389,14 +402,11 @@ define(function() {
                 dataLoaded.resolve();
             }
 
-            dataLoaded.then(function(data) {
-                if (!!data) {
-                    this.data = data;
-                }
-                executeAfterDataHandler.call(this).then(function() {
-                    afterData.resolve();
-                }.bind(this));
-            }.bind(this));
+            if (!!dataLoaded.then) {
+                dataLoaded.then(resolveData.bind(this));
+            } else {
+                resolveData.call(this, dataLoaded);
+            }
 
             return $.when(dataLoaded, afterData);
         });

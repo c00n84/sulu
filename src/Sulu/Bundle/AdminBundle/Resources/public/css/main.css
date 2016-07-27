@@ -657,34 +657,30 @@ input, select {
 .sulu-login.content-success .content-container {
   left: 50%;
 }
-/* line 244, ../scss/modules/login.scss */
-.sulu-login input[type="submit"] {
-  display: none;
-}
 
 @media screen and (max-width: 800px), screen and (orientation: portrait) {
-  /* line 251, ../scss/modules/login.scss */
+  /* line 247, ../scss/modules/login.scss */
   .sulu-login .media-container {
     display: none;
   }
-  /* line 255, ../scss/modules/login.scss */
+  /* line 251, ../scss/modules/login.scss */
   .sulu-login .content-container {
     width: 100%;
   }
-  /* line 259, ../scss/modules/login.scss */
+  /* line 255, ../scss/modules/login.scss */
   .sulu-login .content-container .content-box .content-logo {
     display: block;
   }
-  /* line 264, ../scss/modules/login.scss */
+  /* line 260, ../scss/modules/login.scss */
   .sulu-login .content-container .login-content-footer {
     display: none;
   }
-  /* line 270, ../scss/modules/login.scss */
+  /* line 266, ../scss/modules/login.scss */
   .sulu-login.content-success .content-container {
     left: -100%;
   }
 
-  /* line 276, ../scss/modules/login.scss */
+  /* line 272, ../scss/modules/login.scss */
   .login-label-container {
     left: 50% !important;
   }
@@ -857,25 +853,33 @@ input, select {
 .sulu-header + .wrapper {
   padding-top: 50px;
 }
-/* line 110, ../scss/modules/header.scss */
+/* line 111, ../scss/modules/header.scss */
 .sulu-header.has-tabs + .wrapper .page::before {
   height: 50px;
 }
+/* line 117, ../scss/modules/header.scss */
+.sulu-header.has-label + .wrapper .page::before {
+  height: 30px;
+}
+/* line 123, ../scss/modules/header.scss */
+.sulu-header.has-tabs.has-label + .wrapper .page::before {
+  height: 80px;
+}
 
-/* line 116, ../scss/modules/header.scss */
+/* line 129, ../scss/modules/header.scss */
 .fixed .toolbar-row {
   max-width: 1020px;
 }
 
-/* line 121, ../scss/modules/header.scss */
+/* line 134, ../scss/modules/header.scss */
 .small-fixed .tabs-row .tabs {
   padding-left: 10px;
 }
-/* line 124, ../scss/modules/header.scss */
+/* line 137, ../scss/modules/header.scss */
 .small-fixed .sulu-header .left-container {
   width: 0px;
 }
-/* line 126, ../scss/modules/header.scss */
+/* line 139, ../scss/modules/header.scss */
 .small-fixed .sulu-header .left-container * {
   display: none;
 }
@@ -962,12 +966,11 @@ input, select {
 }
 /* line 13, ../scss/modules/headlines.scss */
 .options-dropdown-container span {
-  background-color: #f1f1f1;
   padding-left: 5px;
   padding-right: 5px;
 }
 
-/* line 22, ../scss/modules/headlines.scss */
+/* line 21, ../scss/modules/headlines.scss */
 .options-dropdown-toggler:hover .options-dropdown-container {
   display: block;
 }
@@ -1003,7 +1006,7 @@ input, select {
 /* line 26, ../scss/modules/data-overlay.scss */
 .data-overlay-content {
   height: 100%;
-  overflow: scroll;
+  overflow: auto;
 }
 
 /* line 3, ../scss/modules/dashboard.scss */
@@ -1021,4 +1024,39 @@ input, select {
 /* line 14, ../scss/modules/dashboard.scss */
 .sulu-dashboard .logo.is-visible {
   opacity: 1;
+}
+
+/* line 2, ../scss/modules/sticky-toolbar.scss */
+.sticky-toolbar.fixed .list-toolbar-container {
+  width: 100%;
+  padding-right: 100px;
+  position: absolute;
+  background: #f1f1f1;
+  z-index: 98;
+  top: 30px;
+  padding-top: 10px;
+}
+/* line 11, ../scss/modules/sticky-toolbar.scss */
+.sticky-toolbar.fixed .list-toolbar-container.fixed {
+  width: 920px;
+}
+@media only screen and (max-width: 1050px) {
+  /* line 11, ../scss/modules/sticky-toolbar.scss */
+  .sticky-toolbar.fixed .list-toolbar-container.fixed {
+    width: 100%;
+    max-width: 920px;
+  }
+}
+/* line 21, ../scss/modules/sticky-toolbar.scss */
+.sticky-toolbar.fixed .datagrid-container {
+  margin-top: 80px;
+}
+/* line 25, ../scss/modules/sticky-toolbar.scss */
+.sticky-toolbar.fixed .list-toolbar {
+  padding-bottom: 10px;
+}
+
+/* line 1, ../scss/modules/csv-export.scss */
+.delimiter, .escape, .enclosure, .new-line {
+  width: 100px;
 }

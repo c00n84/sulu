@@ -37,7 +37,7 @@ define(['services/husky/util'], function(util) {
                     '</div>',
                     '<div class="form-group">',
                     '   <label><%=categoriesLabel%></label>',
-                    '   <div class="<%=constants.categoriesClass%>"></div>',
+                    '   <div class="<%=constants.categoriesClass%> categories-container"></div>',
                     '</div>'
                 ].join('')
             }
@@ -148,6 +148,7 @@ define(['services/husky/util'], function(util) {
                             preselected: this.data.ids,
                             viewOptions: {
                                 table: {
+                                    cropContents: false,
                                     noItemsText: this.translations.noCategoriesAvailable,
                                     showHead: false,
                                     cssClass: 'white-box',
@@ -189,7 +190,7 @@ define(['services/husky/util'], function(util) {
             );
             this.sandbox.on(
                 this.sandbox.events.createEventName('husky.datagrid.', 'item.deselect', this.options.instanceName),
-                this.remove.bind(this)
+                this.removeItem.bind(this)
             );
             this.sandbox.on(
                 this.sandbox.events.createEventName('husky.select.', 'selected.item', this.options.instanceName),
@@ -220,7 +221,7 @@ define(['services/husky/util'], function(util) {
          * Remove category from data with given id.
          * @param {Integer} id
          */
-        remove: function(id) {
+        removeItem: function(id) {
             var index = this.data.ids.indexOf(id);
 
             if (index > -1) {

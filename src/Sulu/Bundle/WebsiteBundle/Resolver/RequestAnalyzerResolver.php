@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -13,7 +13,7 @@ namespace Sulu\Bundle\WebsiteBundle\Resolver;
 
 use Sulu\Component\Webspace\Analyzer\RequestAnalyzerInterface;
 use Sulu\Component\Webspace\Manager\WebspaceManagerInterface;
-use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Resolves the request_analyzer to an array.
@@ -31,16 +31,18 @@ class RequestAnalyzerResolver implements RequestAnalyzerResolverInterface
     private $environment;
 
     /**
-     * @var array
+     * @var RequestStack
      */
-    private $previewDefaults;
+    private $requestStack;
 
-    public function __construct(WebspaceManagerInterface $webspaceManager, $environment, $previewDefaults = [])
-    {
-        $this->environment = $environment;
+    public function __construct(
+        WebspaceManagerInterface $webspaceManager,
+        RequestStack $requestStack,
+        $environment
+    ) {
         $this->webspaceManager = $webspaceManager;
-
-        $this->previewDefaults = array_merge(['analyticsKey' => ''], $previewDefaults);
+        $this->requestStack = $requestStack;
+        $this->environment = $environment;
     }
 
     /**
@@ -52,41 +54,25 @@ class RequestAnalyzerResolver implements RequestAnalyzerResolverInterface
         $defaultLocalization = $requestAnalyzer->getPortal()->getDefaultLocalization();
         $defaultLocale = $defaultLocalization ? $defaultLocalization->getLocalization() : null;
 
+        $currentLocale = null;
+        $currentLocalization = $requestAnalyzer->getCurrentLocalization();
+
+        if ($currentLocalization) {
+            $currentLocale = $currentLocalization->getLocale();
+        }
+
         return [
             'request' => [
                 'webspaceKey' => $requestAnalyzer->getWebspace()->getKey(),
+                'portalKey' => $requestAnalyzer->getPortal()->getKey(),
                 'defaultLocale' => $defaultLocale,
-                'locale' => $requestAnalyzer->getCurrentLocalization()->getLocalization(),
+                'locale' => $currentLocale,
                 'portalUrl' => $requestAnalyzer->getPortalUrl(),
                 'resourceLocatorPrefix' => $requestAnalyzer->getResourceLocatorPrefix(),
                 'resourceLocator' => $requestAnalyzer->getResourceLocator(),
                 'get' => $requestAnalyzer->getGetParameters(),
                 'post' => $requestAnalyzer->getPostParameters(),
                 'analyticsKey' => $requestAnalyzer->getAnalyticsKey(),
-            ],
-        ];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function resolveForPreview($webspaceKey, $locale)
-    {
-        // take first portal url
-        $portalInformation = $this->webspaceManager->getPortalInformations($this->environment);
-        $portalUrl = array_keys($portalInformation)[0];
-
-        return [
-            'request' => [
-                'webspaceKey' => $webspaceKey,
-                'locale' => $locale,
-                'defaultLocale' => $locale,
-                'portalUrl' => $portalUrl,
-                'resourceLocatorPrefix' => '',
-                'resourceLocator' => '',
-                'get' => [],
-                'post' => [],
-                'analyticsKey' => $this->previewDefaults['analyticsKey'],
             ],
         ];
     }

@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -22,6 +22,7 @@ use Sulu\Bundle\ContactBundle\Entity\ContactAddress;
 use Sulu\Bundle\ContactBundle\Entity\ContactRepository;
 use Sulu\Bundle\ContactBundle\Entity\contactTitleRepository;
 use Sulu\Bundle\ContactBundle\Entity\Fax;
+use Sulu\Bundle\ContactBundle\Entity\Note;
 use Sulu\Bundle\ContactBundle\Entity\Url;
 use Sulu\Bundle\ContentBundle\Content\Types\Email;
 use Sulu\Bundle\ContentBundle\Content\Types\Phone;
@@ -170,6 +171,14 @@ class ContactManager extends AbstractContactManager implements DataProviderRepos
                 }
             }
 
+            $notes = $contact->getNotes()->toArray();
+            /** @var Note $note */
+            foreach ($notes as $note) {
+                if ($note->getAccounts()->count() == 0 && $note->getContacts()->count() == 1) {
+                    $this->em->remove($note);
+                }
+            }
+
             $this->em->remove($contact);
             $this->em->flush();
         };
@@ -263,11 +272,6 @@ class ContactManager extends AbstractContactManager implements DataProviderRepos
             $contact->setFormOfAddress($formOfAddress['id']);
         }
 
-        $disabled = $this->getProperty($data, 'disabled');
-        if (!is_null($disabled)) {
-            $contact->setDisabled($disabled);
-        }
-
         $salutation = $this->getProperty($data, 'salutation');
         if (!empty($salutation)) {
             $contact->setSalutation($salutation);
@@ -275,8 +279,11 @@ class ContactManager extends AbstractContactManager implements DataProviderRepos
 
         $birthday = $this->getProperty($data, 'birthday');
         if (!empty($birthday)) {
-            $contact->setBirthday(new DateTime($birthday));
+            $birthday = new DateTime($birthday);
+        } else {
+            $birthday = null;
         }
+        $contact->setBirthday($birthday);
 
         if (!$id) {
             $parentData = $this->getProperty($data, 'account');
@@ -579,9 +586,9 @@ class ContactManager extends AbstractContactManager implements DataProviderRepos
     /**
      * {@inheritdoc}
      */
-    public function findByFilters($filters, $page, $pageSize, $limit, $locale)
+    public function findByFilters($filters, $page, $pageSize, $limit, $locale, $options = [])
     {
-        $entities = $this->contactRepository->findByFilters($filters, $page, $pageSize, $limit, $locale);
+        $entities = $this->contactRepository->findByFilters($filters, $page, $pageSize, $limit, $locale, $options);
 
         return array_map(
             function ($contact) use ($locale) {

@@ -10,7 +10,7 @@
 define([
     'services/sulucontact/account-manager',
     'services/sulucontact/account-router',
-    'services/sulucontact/account-delete-dialog',
+    'services/sulucontact/account-delete-dialog'
 ], function(AccountManager, AccountRouter, DeleteDialog) {
 
     'use strict';
@@ -54,6 +54,7 @@ define([
                 this.sandbox.emit('husky.datagrid.' + constants.datagridInstanceName + '.pagination.change', 'dropdown');
                 this.sandbox.emit('husky.datagrid.' + constants.datagridInstanceName + '.change.page', 1);
 
+                this.sandbox.stickyToolbar.reset(this.$el);
             }.bind(this));
 
             this.sandbox.on('sulu.toolbar.change.cards', function() {
@@ -69,6 +70,8 @@ define([
                     'husky.datagrid.' + constants.datagridInstanceName + '.pagination.change', 'infinite-scroll'
                 );
                 this.sandbox.emit('husky.datagrid.' + constants.datagridInstanceName + '.change.page', 1);
+
+                this.sandbox.stickyToolbar.reset(this.$el);
             }.bind(this));
         },
 
@@ -83,6 +86,8 @@ define([
         };
 
     return {
+
+        stickyToolbar: true,
 
         layout: {
             content: {
@@ -99,7 +104,15 @@ define([
             toolbar: {
                 buttons: {
                     add: {},
-                    deleteSelected: {}
+                    deleteSelected: {},
+                    export: {
+                        options: {
+                            urlParameter: {
+                                flat: true
+                            },
+                            url: '/admin/api/accounts.csv'
+                        }
+                    }
                 }
             }
         },
@@ -141,7 +154,7 @@ define([
                 el: this.sandbox.dom.find('#companies-list', this.$el),
                 url: '/admin/api/accounts?flat=true',
                 searchInstanceName: 'accounts',
-                searchFields: ['name'],
+                searchFields: ['name', 'mainEmail'],
                 resultKey: 'accounts',
                 instanceName: constants.datagridInstanceName,
                 actionCallback: actionCallback.bind(this),

@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -175,7 +175,7 @@ class InternalLinksContainer implements ArrayableInterface
      */
     public function __isset($name)
     {
-        return ($name == 'data');
+        return $name == 'data';
     }
 
     /**

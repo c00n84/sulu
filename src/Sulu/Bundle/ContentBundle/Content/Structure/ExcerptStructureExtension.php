@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -12,6 +12,7 @@
 namespace Sulu\Bundle\ContentBundle\Content\Structure;
 
 use PHPCR\NodeInterface;
+use Sulu\Bundle\SearchBundle\Search\Factory;
 use Sulu\Component\Content\Compat\PropertyInterface;
 use Sulu\Component\Content\Compat\StructureInterface;
 use Sulu\Component\Content\Compat\StructureManagerInterface;
@@ -50,11 +51,6 @@ class ExcerptStructureExtension extends AbstractExtension implements ExportExten
     protected $additionalPrefix = self::EXCERPT_EXTENSION_NAME;
 
     /**
-     * @var StructureInterface
-     */
-    protected $excerptStructure;
-
-    /**
      * @var ContentTypeManagerInterface
      */
     protected $contentTypeManager;
@@ -70,6 +66,11 @@ class ExcerptStructureExtension extends AbstractExtension implements ExportExten
     protected $contentExportManager;
 
     /**
+     * @var ContentImportManager
+     */
+    protected $contentImportManager;
+
+    /**
      * @var string
      */
     private $languageNamespace;
@@ -79,16 +80,23 @@ class ExcerptStructureExtension extends AbstractExtension implements ExportExten
      */
     private $languageCode;
 
+    /**
+     * @var Factory
+     */
+    private $factory;
+
     public function __construct(
         StructureManagerInterface $structureManager,
         ContentTypeManagerInterface $contentTypeManager,
         ContentExportManager $contentExportManager,
-        ContentImportManager $contentImportManager
+        ContentImportManager $contentImportManager,
+        Factory $factory
     ) {
         $this->contentTypeManager = $contentTypeManager;
         $this->structureManager = $structureManager;
         $this->contentExportManager = $contentExportManager;
         $this->contentImportManager = $contentImportManager;
+        $this->factory = $factory;
     }
 
     /**
@@ -96,7 +104,9 @@ class ExcerptStructureExtension extends AbstractExtension implements ExportExten
      */
     public function save(NodeInterface $node, $data, $webspaceKey, $languageCode)
     {
-        foreach ($this->excerptStructure->getProperties() as $property) {
+        $excerptStructure = $this->getExcerptStructure($languageCode);
+
+        foreach ($excerptStructure->getProperties() as $property) {
             $contentType = $this->contentTypeManager->get($property->getContentTypeName());
 
             if (isset($data[$property->getName()])) {
@@ -123,8 +133,10 @@ class ExcerptStructureExtension extends AbstractExtension implements ExportExten
      */
     public function load(NodeInterface $node, $webspaceKey, $languageCode)
     {
+        $excerptStructure = $this->getExcerptStructure($languageCode);
+
         $data = [];
-        foreach ($this->excerptStructure->getProperties() as $property) {
+        foreach ($excerptStructure->getProperties() as $property) {
             $contentType = $this->contentTypeManager->get($property->getContentTypeName());
             $contentType->read(
                 $node,
@@ -153,13 +165,12 @@ class ExcerptStructureExtension extends AbstractExtension implements ExportExten
         // lazy load excerpt structure to avoid redeclaration of classes
         // should be done before parent::setLanguageCode because it uses the $thi<->properties
         // which will be set in initExcerptStructure
-        if ($this->excerptStructure === null) {
-            $this->initProperties();
-        }
+        $this->initProperties($languageCode);
+
         $this->languageCode = $languageCode;
+        $this->languageNamespace = $languageNamespace;
 
         parent::setLanguageCode($languageCode, $languageNamespace, $namespace);
-        $this->languageNamespace = $languageNamespace;
     }
 
     /**
@@ -182,27 +193,55 @@ class ExcerptStructureExtension extends AbstractExtension implements ExportExten
     }
 
     /**
-     * Returns and caches excerpt-structure.
-     *
-     * @return StructureInterface
+     * {@inheritdoc}
      */
-    private function getExcerptStructure()
+    public function getFieldMapping()
     {
-        if ($this->excerptStructure === null) {
-            $this->excerptStructure = $this->structureManager->getStructure(self::EXCERPT_EXTENSION_NAME);
-            $this->excerptStructure->setLanguageCode($this->languageCode);
+        $mappings = parent::getFieldMapping();
+
+        foreach ($this->getExcerptStructure()->getPropertiesByTagName('sulu.search.field') as $property) {
+            $tag = $property->getTag('sulu.search.field');
+            $tagAttributes = $tag->getAttributes();
+
+            $mappings['excerpt' . ucfirst($property->getName())] = [
+                'type' => isset($tagAttributes['type']) ? $tagAttributes['type'] : 'string',
+                'field' => $this->factory->createMetadataExpression(
+                    sprintf('object.getExtensionsData()["excerpt"]["%s"]', $property->getName())
+                ),
+            ];
         }
 
-        return $this->excerptStructure;
+        return $mappings;
     }
 
     /**
-     * initiates structure and properties.
+     * Returns and caches excerpt-structure.
+     *
+     * @param string $locale
+     *
+     * @return StructureInterface
      */
-    private function initProperties()
+    private function getExcerptStructure($locale = null)
+    {
+        if ($locale === null) {
+            $locale = $this->languageCode;
+        }
+
+        $excerptStructure = $this->structureManager->getStructure(self::EXCERPT_EXTENSION_NAME);
+        $excerptStructure->setLanguageCode($locale);
+
+        return $excerptStructure;
+    }
+
+    /**
+     * Initiates structure and properties.
+     *
+     * @param string $locale
+     */
+    private function initProperties($locale)
     {
         /** @var PropertyInterface $property */
-        foreach ($this->getExcerptStructure()->getProperties() as $property) {
+        foreach ($this->getExcerptStructure($locale)->getProperties() as $property) {
             $this->properties[] = $property->getName();
         }
     }

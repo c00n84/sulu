@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -28,7 +28,7 @@ use Sulu\Bundle\ContactBundle\Entity\Note as NoteEntity;
 use Sulu\Bundle\ContactBundle\Entity\Phone as PhoneEntity;
 use Sulu\Bundle\ContactBundle\Entity\Url as UrlEntity;
 use Sulu\Bundle\MediaBundle\Api\Media;
-use Sulu\Bundle\MediaBundle\Entity\Media as MediaEntity;
+use Sulu\Bundle\MediaBundle\Entity\MediaInterface;
 use Sulu\Bundle\TagBundle\Entity\Tag as TagEntity;
 use Sulu\Component\Rest\ApiWrapper;
 use Sulu\Component\Security\Authentication\UserInterface;
@@ -653,34 +653,6 @@ class Contact extends ApiWrapper
     }
 
     /**
-     * Set disabled.
-     *
-     * @param int $disabled
-     *
-     * @return Contact
-     */
-    public function setDisabled($disabled)
-    {
-        $this->entity->setDisabled($disabled);
-
-        return $this;
-    }
-
-    /**
-     * Get disabled.
-     *
-     * @return int
-     *
-     * @VirtualProperty
-     * @SerializedName("disabled")
-     * @Groups({"fullContact","partialContact"})
-     */
-    public function getDisabled()
-    {
-        return $this->entity->getDisabled();
-    }
-
-    /**
      * Sets the avatar (media-api object).
      *
      * @param Media $avatar
@@ -997,7 +969,7 @@ class Contact extends ApiWrapper
         if (!is_null($contactAddresses)) {
             /** @var ContactAddressEntity $contactAddress */
             foreach ($contactAddresses as $contactAddress) {
-                if (!!$contactAddress->getMain()) {
+                if ((bool) $contactAddress->getMain()) {
                     return $contactAddress->getAddress();
                 }
             }
@@ -1009,11 +981,11 @@ class Contact extends ApiWrapper
     /**
      * Add media.
      *
-     * @param MediaEntity $media
+     * @param MediaInterface $media
      *
      * @return Contact
      */
-    public function addMedia(MediaEntity $media)
+    public function addMedia(MediaInterface $media)
     {
         $this->entity->addMedia($media);
     }
@@ -1021,9 +993,9 @@ class Contact extends ApiWrapper
     /**
      * Remove media.
      *
-     * @param MediaEntity $media
+     * @param MediaInterface $media
      */
-    public function removeMedia(MediaEntity $media)
+    public function removeMedia(MediaInterface $media)
     {
         $this->entity->removeMedia($media);
     }

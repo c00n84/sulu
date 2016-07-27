@@ -38,7 +38,7 @@
         background: none;
     }
 
-    #masonry-grid {
+    .masonry-grid {
         margin-bottom: -20px;
         position: relative;
         text-align: center;
@@ -47,7 +47,6 @@
             width: 190px;
             background-color: $white;
             border-radius: 3px;
-            overflow: hidden;
             opacity: 1;
             @include transition(opacity 100ms, top 100ms, left 100ms);
 
@@ -91,12 +90,18 @@
                     float: left;
                 }
 
-                .footer-download {
+                .footer-icon {
                     position: relative;
                     top: 2px;
                     font-size: 17px;
                     float: right;
+                    margin-left: 5px;
+                    cursor: pointer;
                 }
+            }
+
+            &.action-navigator {
+                cursor: pointer;
             }
 
             .action-navigator, .download-navigator {
@@ -107,25 +112,9 @@
     }
 }
 
-.fixed {
-    .collection-header-container {
+.sticky-toolbar.fixed {
+    .list-toolbar-container.collection {
         width: 92.75%;
-        position: absolute;
-        background: $baseBackgroundColor;
-        z-index: 98;
-        top: 0;
-    }
-
-    .datagrid-container {
-        margin-top: 150px;
-    }
-
-    .list-toolbar-container {
-        margin-top: 10px;
-    }
-
-    .list-toolbar {
-        padding-bottom: 10px;
     }
 }
 

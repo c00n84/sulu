@@ -1,4 +1,5 @@
 <?php
+
 /*
  * This file is part of Sulu.
  *
@@ -18,8 +19,7 @@ use Sulu\Component\Content\Query\ContentQueryBuilderInterface;
 use Sulu\Component\Content\Query\ContentQueryExecutorInterface;
 use Sulu\Component\DocumentManager\DocumentManagerInterface;
 use Sulu\Component\SmartContent\ArrayAccessItem;
-use Sulu\Component\SmartContent\Configuration\ComponentConfiguration;
-use Sulu\Component\SmartContent\Configuration\ProviderConfiguration;
+use Sulu\Component\SmartContent\Configuration\Builder;
 use Sulu\Component\SmartContent\Configuration\ProviderConfigurationInterface;
 use Sulu\Component\SmartContent\DataProviderInterface;
 use Sulu\Component\SmartContent\DataProviderResult;
@@ -86,30 +86,30 @@ class ContentDataProvider implements DataProviderInterface
      */
     private function initConfiguration()
     {
-        $this->configuration = new ProviderConfiguration();
-        $this->configuration->setTags(true);
-        $this->configuration->setCategories(true);
-        $this->configuration->setLimit(true);
-        $this->configuration->setPresentAs(true);
-        $this->configuration->setPaginated(true);
-
-        $this->configuration->setDatasource(
-            new ComponentConfiguration(
+        $this->configuration = Builder::create()
+            ->enableTags()
+            ->enableCategories()
+            ->enableLimit()
+            ->enablePagination()
+            ->enablePresentAs()
+            ->enableDatasource(
                 'content-datasource@sulucontent',
                 [
-                    'url' => '/admin/api/nodes?{id=dataSource&}tree=true&webspace-node=true&webspace={webspace}&language={locale}',
+                    'rootUrl' => '/admin/api/nodes?webspace={webspace}&language={locale}&fields=title,order,published&webspace-nodes=single',
+                    'selectedUrl' => '/admin/api/nodes/{datasource}?tree=true&webspace={webspace}&language={locale}&fields=title,order,published&webspace-nodes=single',
                     'resultKey' => 'nodes',
                 ]
             )
-        );
-        $this->configuration->setSorting(
-            [
-                new PropertyParameter('title', 'smart-content.title'),
-                new PropertyParameter('published', 'smart-content.published'),
-                new PropertyParameter('created', 'smart-content.created'),
-                new PropertyParameter('changed', 'smart-content.changed'),
-            ]
-        );
+            ->enableSorting(
+                [
+                    ['column' => 'title', 'title' => 'smart-content.title'],
+                    ['column' => 'published', 'title' => 'smart-content.published'],
+                    ['column' => 'created', 'title' => 'smart-content.created'],
+                    ['column' => 'changed', 'title' => 'smart-content.changed'],
+                ]
+            )
+            ->setDeepLink('content/contents/{webspace}/{locale}/edit:{id}/details')
+            ->getConfiguration();
 
         return $this->configuration;
     }
@@ -136,6 +136,7 @@ class ContentDataProvider implements DataProviderInterface
             [
                 'ids' => [$datasource],
                 'properties' => $properties,
+                'published' => false,
             ]
         );
 

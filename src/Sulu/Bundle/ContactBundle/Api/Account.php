@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -30,7 +30,7 @@ use Sulu\Bundle\ContactBundle\Entity\Note as NoteEntity;
 use Sulu\Bundle\ContactBundle\Entity\Phone as PhoneEntity;
 use Sulu\Bundle\ContactBundle\Entity\Url as UrlEntity;
 use Sulu\Bundle\MediaBundle\Api\Media;
-use Sulu\Bundle\MediaBundle\Entity\Media as MediaEntity;
+use Sulu\Bundle\MediaBundle\Entity\MediaInterface;
 use Sulu\Bundle\TagBundle\Entity\Tag as TagEntity;
 use Sulu\Component\Rest\ApiWrapper;
 
@@ -457,33 +457,6 @@ class Account extends ApiWrapper
     public function getCorporation()
     {
         return $this->entity->getCorporation();
-    }
-
-    /**
-     * Set disabled.
-     *
-     * @param int $disabled
-     *
-     * @return Account
-     */
-    public function setDisabled($disabled)
-    {
-        $this->entity->setDisabled($disabled);
-
-        return $this;
-    }
-
-    /**
-     * Get disabled.
-     *
-     * @return int
-     * @VirtualProperty
-     * @SerializedName("disabled")
-     * @Groups({"fullAccount", "partialAccount"})
-     */
-    public function getDisabled()
-    {
-        return $this->entity->getDisabled();
     }
 
     /**
@@ -1057,15 +1030,15 @@ class Account extends ApiWrapper
     }
 
     /**
-     * Add medias.
+     * Add media.
      *
-     * @param MediaEntity $medias
+     * @param MediaInterface $media
      *
      * @return Account
      */
-    public function addMedia(MediaEntity $medias)
+    public function addMedia(MediaInterface $media)
     {
-        $this->entity->addMedia($medias);
+        $this->entity->addMedia($media);
 
         return $this;
     }
@@ -1073,11 +1046,11 @@ class Account extends ApiWrapper
     /**
      * Remove medias.
      *
-     * @param MediaEntity $medias
+     * @param MediaInterface $media
      */
-    public function removeMedia(MediaEntity $medias)
+    public function removeMedia(MediaInterfae $media)
     {
-        $this->entity->removeMedia($medias);
+        $this->entity->removeMedia($media);
     }
 
     /**

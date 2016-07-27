@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -58,9 +58,9 @@ trait RequestParametersTrait
     protected function getBooleanRequestParameter($request, $name, $force = false, $default = null)
     {
         $value = $this->getRequestParameter($request, $name, $force, $default);
-        if ($value === 'true') {
+        if ($value === 'true' || $value === true) {
             $value = true;
-        } elseif ($value === 'false') {
+        } elseif ($value === 'false' || $value === false) {
             $value = false;
         } elseif ($force && $value !== true && $value !== false) {
             throw new ParameterDataTypeException(get_class($this), $name);

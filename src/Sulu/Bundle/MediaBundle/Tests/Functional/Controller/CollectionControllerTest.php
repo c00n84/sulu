@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -17,6 +17,8 @@ use Sulu\Bundle\MediaBundle\Entity\Collection;
 use Sulu\Bundle\MediaBundle\Entity\CollectionMeta;
 use Sulu\Bundle\MediaBundle\Entity\CollectionType;
 use Sulu\Bundle\TestBundle\Testing\SuluTestCase;
+use Sulu\Component\Cache\CacheInterface;
+use Sulu\Component\Media\SystemCollections\SystemCollectionManagerInterface;
 
 class CollectionControllerTest extends SuluTestCase
 {
@@ -41,6 +43,11 @@ class CollectionControllerTest extends SuluTestCase
     private $collectionType2;
 
     /**
+     * @var CacheInterface
+     */
+    private $systemCollectionCache;
+
+    /**
      * @var array
      */
     private $systemCollectionConfig;
@@ -50,10 +57,14 @@ class CollectionControllerTest extends SuluTestCase
         parent::setUp();
 
         $this->purgeDatabase();
-        $this->em = $this->db('ORM')->getOm();
+        $this->em = $this->getEntityManager();
         $this->initOrm();
 
+        $this->systemCollectionCache = $this->getContainer()->get('sulu_media.system_collections.cache');
         $this->systemCollectionConfig = $this->getContainer()->getParameter('sulu_media.system_collections');
+
+        // to be sure that the system collections will rebuild after purge database
+        $this->systemCollectionCache->invalidate();
     }
 
     /**
@@ -109,7 +120,11 @@ class CollectionControllerTest extends SuluTestCase
             'Default Collection Type',
             'Default Collection Type'
         );
-        $this->collectionType2 = $this->createCollectionType(2, 'collection.system', 'System Collections');
+        $this->collectionType2 = $this->createCollectionType(
+            2,
+            SystemCollectionManagerInterface::COLLECTION_TYPE,
+            'System Collections'
+        );
         $this->em->persist($this->collectionType1);
         $this->em->persist($this->collectionType2);
         $this->em->flush();
@@ -176,6 +191,44 @@ class CollectionControllerTest extends SuluTestCase
         return $collectionType;
     }
 
+    private function mapCollections($collections)
+    {
+        $result = [];
+        foreach ($collections as $collection) {
+            $result[$collection->title] = [
+                'title' => $collection->title,
+                'parent' => $collection->_embedded->parent ? $collection->_embedded->parent->title : null,
+                'collections' => $this->mapCollections($collection->_embedded->collections),
+            ];
+        }
+        ksort($result);
+
+        return array_values($result);
+    }
+
+    private function mapCollectionsFlat($collections)
+    {
+        $result = [];
+        foreach ($collections as $collection) {
+            $children = [];
+            foreach ($collection->_embedded->collections as $child) {
+                $children[$child->title] = $child->title;
+            }
+            ksort($children);
+
+            $result[$collection->title] = [
+                'title' => $collection->title,
+                'parent' => $collection->_embedded->parent ? $collection->_embedded->parent->title : null,
+                'collections' => array_values($children),
+            ];
+
+            $result = array_merge($result, $this->mapCollectionsFlat($collection->_embedded->collections));
+        }
+        ksort($result);
+
+        return array_values($result);
+    }
+
     /**
      * @description Test Collection GET by ID
      */
@@ -192,7 +245,7 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $style = json_decode(
             json_encode(
@@ -233,7 +286,7 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode(), $client->getResponse()->getContent());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response->_embedded->collections);
 
@@ -252,7 +305,7 @@ class CollectionControllerTest extends SuluTestCase
             '/api/collections/10'
         );
 
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
         $this->assertEquals(5005, $response->code);
@@ -277,9 +330,9 @@ class CollectionControllerTest extends SuluTestCase
             [
                 'locale' => 'en-gb',
                 'style' => [
-                        'type' => 'circle',
-                        'color' => $generateColor,
-                    ],
+                    'type' => 'circle',
+                    'color' => $generateColor,
+                ],
                 'type' => [
                     'id' => $this->collectionType1->getId(),
                 ],
@@ -291,7 +344,7 @@ class CollectionControllerTest extends SuluTestCase
 
         $response = json_decode($client->getResponse()->getContent());
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $style = new \stdClass();
         $style->type = 'circle';
@@ -320,7 +373,7 @@ class CollectionControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
 
@@ -395,7 +448,7 @@ class CollectionControllerTest extends SuluTestCase
 
         $response = json_decode($client->getResponse()->getContent());
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $style = new \stdClass();
         $style->type = 'circle';
@@ -422,7 +475,7 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
 
@@ -452,7 +505,7 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
         $this->assertEquals(2 + $this->getAmountOfSystemCollections(), $response->total);
@@ -478,7 +531,7 @@ class CollectionControllerTest extends SuluTestCase
 
         $response = json_decode($client->getResponse()->getContent());
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals('en', $response->locale);
         $this->assertNotNull($response->id);
@@ -498,7 +551,7 @@ class CollectionControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
 
@@ -545,7 +598,7 @@ class CollectionControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
 
@@ -599,9 +652,9 @@ class CollectionControllerTest extends SuluTestCase
             '/api/collections',
             [
                 'style' => [
-                        'type' => 'circle',
-                        'color' => $generateColor,
-                    ],
+                    'type' => 'circle',
+                    'color' => $generateColor,
+                ],
                 'type' => [
                     'id' => 91283,
                 ],
@@ -613,7 +666,7 @@ class CollectionControllerTest extends SuluTestCase
 
         $response = json_decode($client->getResponse()->getContent());
 
-        $this->assertEquals(400, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(400, $client->getResponse());
         $this->assertTrue(isset($response->message));
     }
 
@@ -639,7 +692,7 @@ class CollectionControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $client->request(
             'GET',
@@ -649,7 +702,7 @@ class CollectionControllerTest extends SuluTestCase
             ]
         );
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $style = new \stdClass();
         $style->type = 'circle';
@@ -673,7 +726,7 @@ class CollectionControllerTest extends SuluTestCase
             '/api/collections?locale=en-gb'
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
 
@@ -727,14 +780,14 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $client->request(
             'GET',
             '/api/collections/' . $this->collection1->getId()
         );
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $style = new \stdClass();
         $style->type = 'circle';
@@ -758,7 +811,7 @@ class CollectionControllerTest extends SuluTestCase
             '/api/collections?locale=en'
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
 
@@ -809,23 +862,23 @@ class CollectionControllerTest extends SuluTestCase
             '/api/collections/' . $this->collection1->getId(),
             [
                 'style' => [
-                        'type' => 'quader',
-                        'color' => '#00ccff',
-                    ],
+                    'type' => 'quader',
+                    'color' => '#00ccff',
+                ],
                 'type' => [
                     'id' => $collectionType->getId(),
                 ],
             ]
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $client->request(
             'GET',
             '/api/collections/' . $this->collection1->getId() . '?locale=en-gb'
         );
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $style = new \stdClass();
         $style->type = 'quader';
@@ -848,14 +901,14 @@ class CollectionControllerTest extends SuluTestCase
             '/api/collections/404',
             [
                 'style' => [
-                        'type' => 'quader',
-                        'color' => '#00ccff',
-                    ],
+                    'type' => 'quader',
+                    'color' => '#00ccff',
+                ],
                 'type' => $this->collectionType1->getId(),
             ]
         );
 
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
     }
 
     /**
@@ -866,7 +919,7 @@ class CollectionControllerTest extends SuluTestCase
         $client = $this->createAuthenticatedClient();
 
         $client->request('DELETE', '/api/collections/' . $this->collection1->getId());
-        $this->assertEquals('204', $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(204, $client->getResponse());
 
         $client = $this->createAuthenticatedClient();
 
@@ -875,7 +928,7 @@ class CollectionControllerTest extends SuluTestCase
             '/api/collections/' . $this->collection1->getId()
         );
 
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
         $this->assertEquals(5005, $response->code);
@@ -890,7 +943,7 @@ class CollectionControllerTest extends SuluTestCase
         $client = $this->createAuthenticatedClient();
 
         $client->request('DELETE', '/api/collections/404');
-        $this->assertEquals('404', $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
 
         $client->request('GET', '/api/collections?flat=true');
         $response = json_decode($client->getResponse()->getContent());
@@ -975,19 +1028,15 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
         $this->assertEquals(2, $response->total);
         $this->assertCount(2, $response->_embedded->collections);
-        $items = $response->_embedded->collections;
+        $items = $this->mapCollections($response->_embedded->collections);
 
-        $this->assertEquals($titles[0], $items[0]->title);
-        $this->assertEquals(null, $items[0]->_embedded->parent);
-        $this->assertEmpty($items[0]->_embedded->collections);
-        $this->assertEquals($titles[3], $items[1]->title);
-        $this->assertEquals(null, $items[1]->_embedded->parent);
-        $this->assertEmpty($items[1]->_embedded->collections);
+        $this->assertContains(['title' => $titles[0], 'parent' => null, 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[3], 'parent' => null, 'collections' => []], $items);
 
         $client = $this->createAuthenticatedClient();
         $client->request(
@@ -999,36 +1048,19 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
         $this->assertEquals(6, $response->total);
         $this->assertCount(6, $response->_embedded->collections);
-        $items = $response->_embedded->collections;
+        $items = $this->mapCollections($response->_embedded->collections);
 
-        $this->assertEquals($titles[0], $items[0]->title);
-        $this->assertNull($items[0]->_embedded->parent);
-        $this->assertEmpty($items[0]->_embedded->collections);
-
-        $this->assertEquals($titles[1], $items[1]->title);
-        $this->assertNotNull($items[1]->_embedded->parent);
-        $this->assertEmpty($items[1]->_embedded->collections);
-
-        $this->assertEquals($titles[2], $items[2]->title);
-        $this->assertNotNull($items[2]->_embedded->parent);
-        $this->assertEmpty($items[2]->_embedded->collections);
-
-        $this->assertEquals($titles[3], $items[3]->title);
-        $this->assertNull($items[3]->_embedded->parent);
-        $this->assertEmpty($items[3]->_embedded->collections);
-
-        $this->assertEquals($titles[4], $items[4]->title);
-        $this->assertNotNull($items[4]->_embedded->parent);
-        $this->assertEmpty($items[4]->_embedded->collections);
-
-        $this->assertEquals($titles[5], $items[5]->title);
-        $this->assertNotNull($items[5]->_embedded->parent);
-        $this->assertEmpty($items[5]->_embedded->collections);
+        $this->assertContains(['title' => $titles[0], 'parent' => null, 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[1], 'parent' => $titles[0], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[2], 'parent' => $titles[0], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[3], 'parent' => null, 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[4], 'parent' => $titles[3], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[5], 'parent' => $titles[3], 'collections' => []], $items);
 
         $client = $this->createAuthenticatedClient();
         $client->request(
@@ -1040,40 +1072,20 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
         $this->assertEquals(7, $response->total);
         $this->assertCount(7, $response->_embedded->collections);
-        $items = $response->_embedded->collections;
+        $items = $this->mapCollections($response->_embedded->collections);
 
-        $this->assertEquals($titles[0], $items[0]->title);
-        $this->assertNull($items[0]->_embedded->parent);
-        $this->assertEmpty($items[0]->_embedded->collections);
-
-        $this->assertEquals($titles[1], $items[1]->title);
-        $this->assertNotNull($items[1]->_embedded->parent);
-        $this->assertEmpty($items[1]->_embedded->collections);
-
-        $this->assertEquals($titles[2], $items[2]->title);
-        $this->assertNotNull($items[2]->_embedded->parent);
-        $this->assertEmpty($items[2]->_embedded->collections);
-
-        $this->assertEquals($titles[3], $items[3]->title);
-        $this->assertNull($items[3]->_embedded->parent);
-        $this->assertEmpty($items[3]->_embedded->collections);
-
-        $this->assertEquals($titles[4], $items[4]->title);
-        $this->assertNotNull($items[4]->_embedded->parent);
-        $this->assertEmpty($items[4]->_embedded->collections);
-
-        $this->assertEquals($titles[5], $items[5]->title);
-        $this->assertNotNull($items[5]->_embedded->parent);
-        $this->assertEmpty($items[5]->_embedded->collections);
-
-        $this->assertEquals($titles[6], $items[6]->title);
-        $this->assertNotNull($items[6]->_embedded->parent);
-        $this->assertEmpty($items[6]->_embedded->collections);
+        $this->assertContains(['title' => $titles[0], 'parent' => null, 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[1], 'parent' => $titles[0], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[2], 'parent' => $titles[0], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[3], 'parent' => null, 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[4], 'parent' => $titles[3], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[5], 'parent' => $titles[3], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[6], 'parent' => $titles[5], 'collections' => []], $items);
     }
 
     public function testCGetNestedTree()
@@ -1090,18 +1102,14 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
         $this->assertCount(2, $response->_embedded->collections);
-        $items = $response->_embedded->collections;
+        $items = $this->mapCollections($response->_embedded->collections);
 
-        $this->assertEquals($titles[0], $items[0]->title);
-        $this->assertEquals(null, $items[0]->_embedded->parent);
-        $this->assertEmpty($items[0]->_embedded->collections);
-        $this->assertEquals($titles[3], $items[1]->title);
-        $this->assertEquals(null, $items[1]->_embedded->parent);
-        $this->assertEmpty($items[1]->_embedded->collections);
+        $this->assertContains(['title' => $titles[0], 'parent' => null, 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[3], 'parent' => null, 'collections' => []], $items);
 
         $client = $this->createAuthenticatedClient();
         $client->request(
@@ -1113,39 +1121,34 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
         $this->assertCount(2, $response->_embedded->collections);
-        $items = $response->_embedded->collections;
+        $items = $this->mapCollections($response->_embedded->collections);
 
-        $this->assertEquals($titles[0], $items[0]->title);
-        $this->assertNull($items[0]->_embedded->parent);
-        $this->assertNotEmpty($items[0]->_embedded->collections);
-
-        $this->assertEquals($titles[3], $items[1]->title);
-        $this->assertNull($items[1]->_embedded->parent);
-        $this->assertNotEmpty($items[1]->_embedded->collections);
-
-        $subItems = $items[0]->_embedded->collections;
-        $this->assertCount(2, $subItems);
-        $this->assertEquals($titles[1], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
-
-        $this->assertEquals($titles[2], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertEmpty($subItems[1]->_embedded->collections);
-
-        $subItems = $items[1]->_embedded->collections;
-        $this->assertCount(2, $subItems);
-        $this->assertEquals($titles[4], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
-
-        $this->assertEquals($titles[5], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertEmpty($subItems[1]->_embedded->collections);
+        $this->assertContains(
+            [
+                'title' => $titles[0],
+                'parent' => null,
+                'collections' => [
+                    ['title' => $titles[1], 'parent' => $titles[0], 'collections' => []],
+                    ['title' => $titles[2], 'parent' => $titles[0], 'collections' => []],
+                ],
+            ],
+            $items
+        );
+        $this->assertContains(
+            [
+                'title' => $titles[3],
+                'parent' => null,
+                'collections' => [
+                    ['title' => $titles[4], 'parent' => $titles[3], 'collections' => []],
+                    ['title' => $titles[5], 'parent' => $titles[3], 'collections' => []],
+                ],
+            ],
+            $items
+        );
 
         $client = $this->createAuthenticatedClient();
         $client->request(
@@ -1157,45 +1160,40 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertNotEmpty($response);
         $this->assertCount(2, $response->_embedded->collections);
-        $items = $response->_embedded->collections;
+        $items = $this->mapCollections($response->_embedded->collections);
 
-        $this->assertEquals($titles[0], $items[0]->title);
-        $this->assertNull($items[0]->_embedded->parent);
-        $this->assertNotEmpty($items[0]->_embedded->collections);
-
-        $this->assertEquals($titles[3], $items[1]->title);
-        $this->assertNull($items[1]->_embedded->parent);
-        $this->assertNotEmpty($items[1]->_embedded->collections);
-
-        $subItems = $items[0]->_embedded->collections;
-        $this->assertCount(2, $subItems);
-        $this->assertEquals($titles[1], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
-
-        $this->assertEquals($titles[2], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertEmpty($subItems[1]->_embedded->collections);
-
-        $subItems = $items[1]->_embedded->collections;
-        $this->assertCount(2, $subItems);
-        $this->assertEquals($titles[4], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
-
-        $this->assertEquals($titles[5], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertNotEmpty($subItems[1]->_embedded->collections);
-
-        $subItems = $subItems[1]->_embedded->collections;
-        $this->assertCount(1, $subItems);
-        $this->assertEquals($titles[6], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
+        $this->assertContains(
+            [
+                'title' => $titles[0],
+                'parent' => null,
+                'collections' => [
+                    ['title' => $titles[1], 'parent' => $titles[0], 'collections' => []],
+                    ['title' => $titles[2], 'parent' => $titles[0], 'collections' => []],
+                ],
+            ],
+            $items
+        );
+        $this->assertContains(
+            [
+                'title' => $titles[3],
+                'parent' => null,
+                'collections' => [
+                    ['title' => $titles[4], 'parent' => $titles[3], 'collections' => []],
+                    [
+                        'title' => $titles[5],
+                        'parent' => $titles[3],
+                        'collections' => [
+                            ['title' => $titles[6], 'parent' => $titles[5], 'collections' => []],
+                        ],
+                    ],
+                ],
+            ],
+            $items
+        );
     }
 
     public function testGetBreadcrumb()
@@ -1240,7 +1238,7 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($titles[3], $response->title);
         $this->assertNull($response->_embedded->parent);
@@ -1256,21 +1254,16 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($titles[3], $response->title);
         $this->assertNull($response->_embedded->parent);
         $this->assertNotEmpty($response->_embedded->collections);
 
-        $subItems = $response->_embedded->collections;
-        $this->assertCount(2, $subItems);
-        $this->assertEquals($titles[4], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
-
-        $this->assertEquals($titles[5], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertEmpty($subItems[1]->_embedded->collections);
+        $items = $this->mapCollections($response->_embedded->collections);
+        $this->assertCount(2, $items);
+        $this->assertContains(['title' => $titles[4], 'parent' => $titles[3], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[5], 'parent' => $titles[3], 'collections' => []], $items);
 
         $client = $this->createAuthenticatedClient();
         $client->request(
@@ -1282,27 +1275,26 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($titles[3], $response->title);
         $this->assertNull($response->_embedded->parent);
         $this->assertNotEmpty($response->_embedded->collections);
 
-        $subItems = $response->_embedded->collections;
-        $this->assertCount(2, $subItems);
-        $this->assertEquals($titles[4], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
+        $items = $this->mapCollections($response->_embedded->collections);
+        $this->assertCount(2, $items);
 
-        $this->assertEquals($titles[5], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertNotEmpty($subItems[1]->_embedded->collections);
-
-        $subItems = $subItems[1]->_embedded->collections;
-        $this->assertCount(1, $subItems);
-        $this->assertEquals($titles[6], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
+        $this->assertContains(['title' => $titles[4], 'parent' => $titles[3], 'collections' => []], $items);
+        $this->assertContains(
+            [
+                'title' => $titles[5],
+                'parent' => $titles[3],
+                'collections' => [
+                    ['title' => $titles[6], 'parent' => $titles[5], 'collections' => []],
+                ],
+            ],
+            $items
+        );
     }
 
     /**
@@ -1322,7 +1314,7 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($ids[0], $response->_embedded->parent->id);
 
@@ -1336,48 +1328,24 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent());
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
-        $items = $response->_embedded->collections;
-
-        // all items in this response
+        $this->assertHttpStatusCode(200, $client->getResponse());
+        $items = $this->mapCollectionsFlat($response->_embedded->collections);
         $this->assertEquals(7, $response->total);
+        $this->assertCount(7, $items);
 
-        // root collection items
-        $this->assertCount(1, $items);
-
-        $this->assertEquals($titles[0], $items[0]->title);
-        $this->assertNull($items[0]->_embedded->parent);
-        $this->assertNotEmpty($items[0]->_embedded->collections);
-
-        $subItems = $items[0]->_embedded->collections;
-        $this->assertCount(3, $subItems);
-        $this->assertEquals($titles[1], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
-
-        $this->assertEquals($titles[2], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertEmpty($subItems[1]->_embedded->collections);
-
-        $this->assertEquals($titles[3], $subItems[2]->title);
-        $this->assertNotNull($subItems[2]->_embedded->parent);
-        $this->assertNotEmpty($subItems[2]->_embedded->collections);
-
-        $subItems = $subItems[2]->_embedded->collections;
-        $this->assertCount(2, $subItems);
-        $this->assertEquals($titles[4], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
-
-        $this->assertEquals($titles[5], $subItems[1]->title);
-        $this->assertNotNull($subItems[1]->_embedded->parent);
-        $this->assertNotEmpty($subItems[1]->_embedded->collections);
-
-        $subItems = $subItems[1]->_embedded->collections;
-        $this->assertCount(1, $subItems);
-        $this->assertEquals($titles[6], $subItems[0]->title);
-        $this->assertNotNull($subItems[0]->_embedded->parent);
-        $this->assertEmpty($subItems[0]->_embedded->collections);
+        $this->assertContains(
+            ['title' => $titles[0], 'parent' => null, 'collections' => ['col2', 'col3', 'col4']],
+            $items
+        );
+        $this->assertContains(['title' => $titles[1], 'parent' => $titles[0], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[2], 'parent' => $titles[0], 'collections' => []], $items);
+        $this->assertContains(
+            ['title' => $titles[3], 'parent' => $titles[0], 'collections' => [$titles[4], $titles[5]]],
+            $items
+        );
+        $this->assertContains(['title' => $titles[4], 'parent' => $titles[3], 'collections' => []], $items);
+        $this->assertContains(['title' => $titles[5], 'parent' => $titles[3], 'collections' => [$titles[6]]], $items);
+        $this->assertContains(['title' => $titles[6], 'parent' => $titles[5], 'collections' => []], $items);
     }
 
     public function testSearchChildren()
@@ -1394,10 +1362,10 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($titles[3], $response['title']);
-        $this->assertcount(1, $response['_embedded']['collections']);
+        $this->assertCount(1, $response['_embedded']['collections']);
         $this->assertEquals($titles[4], $response['_embedded']['collections'][0]['title']);
     }
 
@@ -1420,12 +1388,19 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($titles[3], $response['title']);
-        $this->assertcount(2, $response['_embedded']['collections']);
-        $this->assertEquals($titles[4], $response['_embedded']['collections'][0]['title']);
-        $this->assertEquals($titles[5], $response['_embedded']['collections'][1]['title']);
+        $this->assertCount(2, $response['_embedded']['collections']);
+        $items = array_map(
+            function ($collection) {
+                return $collection['title'];
+            },
+            $response['_embedded']['collections']
+        );
+
+        $this->assertContains($titles[4], $items);
+        $this->assertContains($titles[5], $items);
 
         $client = $this->createAuthenticatedClient();
         $client->request(
@@ -1437,10 +1412,10 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($titles[3], $response['title']);
-        $this->assertcount(1, $response['_embedded']['collections']);
+        $this->assertCount(1, $response['_embedded']['collections']);
         $this->assertEquals('my collection', $response['_embedded']['collections'][0]['title']);
 
         $client = $this->createAuthenticatedClient();
@@ -1453,13 +1428,21 @@ class CollectionControllerTest extends SuluTestCase
         );
 
         $response = json_decode($client->getResponse()->getContent(), true);
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $this->assertEquals($titles[3], $response['title']);
-        $this->assertcount(3, $response['_embedded']['collections']);
-        $this->assertEquals($titles[4], $response['_embedded']['collections'][0]['title']);
-        $this->assertEquals($titles[5], $response['_embedded']['collections'][1]['title']);
-        $this->assertEquals('my collection', $response['_embedded']['collections'][2]['title']);
+        $this->assertCount(3, $response['_embedded']['collections']);
+
+        $items = array_map(
+            function ($collection) {
+                return $collection['title'];
+            },
+            $response['_embedded']['collections']
+        );
+
+        $this->assertContains($titles[4], $items);
+        $this->assertContains($titles[5], $items);
+        $this->assertContains('my collection', $items);
     }
 
     public function testPostParentIsSystemCollection()
@@ -1482,7 +1465,7 @@ class CollectionControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(403, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(403, $client->getResponse());
     }
 
     public function testPutSystemCollection()
@@ -1504,6 +1487,6 @@ class CollectionControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(403, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(403, $client->getResponse());
     }
 }

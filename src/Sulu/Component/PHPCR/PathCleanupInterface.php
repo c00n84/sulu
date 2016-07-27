@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -24,7 +24,7 @@ interface PathCleanupInterface
      *
      * @return string clean string
      */
-    public function cleanup($dirty, $languageCode);
+    public function cleanup($dirty, $languageCode = null);
 
     /**
      * returns TRUE if path is valid.

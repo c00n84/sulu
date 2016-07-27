@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -20,7 +20,7 @@ class TagControllerTest extends SuluTestCase
 
     protected function setUp()
     {
-        $this->em = $this->db('ORM')->getOm();
+        $this->em = $this->getEntityManager();
         $this->session = $this->getContainer()->get('doctrine_phpcr')->getConnection();
 
         $this->initOrm();
@@ -52,11 +52,13 @@ class TagControllerTest extends SuluTestCase
             '/api/tags/' . $this->tag1->getId()
         );
 
-        $response = json_decode($client->getResponse()->getContent());
+        $response = json_decode($client->getResponse()->getContent(), true);
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
-        $this->assertEquals('tag1', $response->name);
+        $this->assertEquals('tag1', $response['name']);
+        $this->assertNotContains('creator', array_keys($response));
+        $this->assertNotContains('changer', array_keys($response));
     }
 
     public function testList()
@@ -98,7 +100,7 @@ class TagControllerTest extends SuluTestCase
             '/api/tags/11230'
         );
 
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
         $this->assertEquals(0, $response->code);
@@ -123,11 +125,13 @@ class TagControllerTest extends SuluTestCase
             '/api/tags/' . $response->id
         );
 
-        $response = json_decode($client->getResponse()->getContent());
+        $response = json_decode($client->getResponse()->getContent(), true);
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
-        $this->assertEquals('tag3', $response->name);
+        $this->assertEquals('tag3', $response['name']);
+        $this->assertNotContains('creator', array_keys($response));
+        $this->assertNotContains('changer', array_keys($response));
     }
 
     public function testPostExistingName()
@@ -139,7 +143,7 @@ class TagControllerTest extends SuluTestCase
             ['name' => 'tag1']
         );
 
-        $this->assertEquals(400, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(400, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
         $this->assertEquals('A tag with the name "tag1"already exists!', $response->message);
@@ -164,11 +168,13 @@ class TagControllerTest extends SuluTestCase
             '/api/tags/' . $this->tag1->getId()
         );
 
-        $response = json_decode($client->getResponse()->getContent());
+        $response = json_decode($client->getResponse()->getContent(), true);
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
-        $this->assertEquals('tag1_new', $response->name);
+        $this->assertEquals('tag1_new', $response['name']);
+        $this->assertNotContains('creator', array_keys($response));
+        $this->assertNotContains('changer', array_keys($response));
     }
 
     public function testPutExistingName()
@@ -180,7 +186,7 @@ class TagControllerTest extends SuluTestCase
             ['name' => 'tag1']
         );
 
-        $this->assertEquals(400, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(400, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
         $this->assertEquals('A tag with the name "tag1"already exists!', $response->message);
@@ -196,7 +202,7 @@ class TagControllerTest extends SuluTestCase
             ['name' => 'tag1_new']
         );
 
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
     }
 
     public function testDeleteById()
@@ -214,13 +220,13 @@ class TagControllerTest extends SuluTestCase
             'DELETE',
             '/api/tags/' . $this->tag1->getId()
         );
-        $this->assertEquals('204', $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(204, $client->getResponse());
 
         $client->request(
             'GET',
             '/api/tags/' . $this->tag1->getId()
         );
-        $this->assertEquals('404', $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
     }
 
     public function testDeleteByNotExistingId()
@@ -231,7 +237,7 @@ class TagControllerTest extends SuluTestCase
             'DELETE',
             '/api/tags/4711'
         );
-        $this->assertEquals('404', $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
     }
 
     public function testMerge()
@@ -262,32 +268,32 @@ class TagControllerTest extends SuluTestCase
                 $this->tag2->getId(), $tag3->getId(), $tag4->getId(),
             ]), 'dest' => $this->tag1->getId()]
         );
-        $this->assertEquals(303, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(303, $client->getResponse());
         $this->assertEquals('/admin/api/tags/' . $this->tag1->getId(), $client->getResponse()->headers->get('location'));
 
         $client->request(
             'GET',
             '/api/tags/' . $this->tag1->getId()
         );
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $client->request(
             'GET',
             '/api/tags/' . $this->tag2->getId()
         );
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
 
         $client->request(
             'GET',
             '/api/tags/' . $tag3->getId()
         );
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
 
         $client->request(
             'GET',
             '/api/tags/' . $tag4->getId()
         );
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
     }
 
     public function testMergeNotExisting()
@@ -299,7 +305,7 @@ class TagControllerTest extends SuluTestCase
             ['src' => 1233, 'dest' => $this->tag1->getId()]
         );
 
-        $this->assertEquals(404, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(404, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
 
@@ -328,7 +334,7 @@ class TagControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
         $response = json_decode($client->getResponse()->getContent());
 
         $this->assertEquals('tag3', $response[0]->name);
@@ -368,7 +374,7 @@ class TagControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(400, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(400, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
         $this->assertEquals('A tag with the name "tag1"already exists!', $response->message);
@@ -393,7 +399,7 @@ class TagControllerTest extends SuluTestCase
             ]
         );
 
-        $this->assertEquals(200, $client->getResponse()->getStatusCode());
+        $this->assertHttpStatusCode(200, $client->getResponse());
 
         $response = json_decode($client->getResponse()->getContent());
         $this->assertEquals('tag11', $response[0]->name);

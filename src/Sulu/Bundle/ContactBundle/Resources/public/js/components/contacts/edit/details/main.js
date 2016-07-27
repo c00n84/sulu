@@ -86,14 +86,11 @@ define([
         },
 
         destroy: function() {
-            this.sandbox.emit('sulu.header.toolbar.item.hide', 'disabler');
-            this.cleanUp();
+            // stop contact form before leaving
+            this.sandbox.stop(constants.editFormSelector);
         },
 
         render: function() {
-            this.sandbox.emit(this.options.disablerToggler + '.change', this.data.disabled);
-            this.sandbox.emit('sulu.header.toolbar.item.show', 'disabler');
-
             this.sandbox.once('sulu.contacts.set-defaults', this.setDefaults.bind(this));
             this.sandbox.once('sulu.contacts.set-types', this.setTypes.bind(this));
             this.sandbox.dom.html(this.$el, this.renderTemplate('/admin/contact/template/contact/form'));
@@ -139,7 +136,8 @@ define([
          * @param data
          */
         initAvatarContainer: function(data) {
-            if (!!data.avatar) {
+            // if avatar is selected and is not a "dummy"
+            if (!!data.avatar && !!data.avatar.id) {
                 this.updateAvatarContainer(data.avatar.id, data.avatar.thumbnails[constants.imageFormat], data.avatar.url);
             }
 
@@ -154,10 +152,11 @@ define([
                     '/admin/api/media/' + curMediaId + '?action=new-version' :
                     '/admin/api/media?collection=' + this.formOptions.contactAvatarCollection;
 
+                url = url + '&locale=' + encodeURIComponent(this.sandbox.sulu.user.locale);
+                
                 // if possible, change the title of the avatar to the name of the contact
                 if (!!data.fullName) {
                     url = url + '&title=' + encodeURIComponent(data.fullName);
-                    url = url + '&locale=' + encodeURIComponent(this.sandbox.sulu.user.locale);
                 }
 
                 return url;
@@ -383,29 +382,10 @@ define([
                 'position-select',
                 'api/contact/positions');
 
-            this.sandbox.on('husky.toggler.sulu-toolbar.changed', this.toggleDisableContact.bind(this));
-
             this.sandbox.on('husky.dropzone.contact-avatar.success', function(file, response) {
                 this.saveAvatarData(response);
                 this.updateAvatarContainer(response.id, response.thumbnails[constants.imageFormat], response.url);
             }, this);
-        },
-
-        /**
-         * Disables or enables the contact
-         * @param disable {Boolean} true to disable, false to enable
-         */
-        toggleDisableContact: function(disable) {
-            this.data.disabled = disable;
-            this.sandbox.emit('sulu.tab.dirty');
-        },
-
-        /**
-         * Does some cleanup with aura components
-         */
-        cleanUp: function() {
-            // stop contact form before leaving
-            this.sandbox.stop(constants.editFormSelector);
         },
 
         initContactData: function() {
@@ -495,6 +475,8 @@ define([
             data.avatar = {
                 id: this.sandbox.dom.data(constants.avatarImageId, 'mediaId')
             };
+            data.position = this.sandbox.form.element.getValue('#contact-position');
+            data.title = this.sandbox.form.element.getValue('#contact-title');
 
             // FIXME auto complete in mapper
             // only get id, if auto-complete is not empty:
@@ -547,7 +529,7 @@ define([
                 this.sandbox.emit(
                     'husky.select.' + type + '.update',
                     response,
-                    [response[response.length - 1]], // preselected
+                    [response[response.length - 1].id], // preselected
                     true,
                     true
                 );
@@ -585,7 +567,7 @@ define([
 
                 this.sandbox.dom.on(formSelector, 'change keyup', function() {
                     this.sandbox.emit('sulu.tab.dirty');
-                }.bind(this), 'select, input, textarea, .trigger-save-button');
+                }.bind(this), 'select, input, textarea, .trigger-save-button, #birthday');
 
                 this.sandbox.on('sulu.contact-form.changed', function() {
                     this.sandbox.emit('sulu.tab.dirty');

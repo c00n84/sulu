@@ -1,7 +1,7 @@
 <?php
 
 /*
- * This file is part of the Sulu.
+ * This file is part of Sulu.
  *
  * (c) MASSIVE ART WebServices GmbH
  *
@@ -29,4 +29,11 @@ interface ContentQueryBuilderInterface
      * @param array $options
      */
     public function init(array $options);
+
+    /**
+     * Returns if unpublished pages are loaded.
+     *
+     * @return bool
+     */
+    public function getPublished();
 }
